@@ -19,7 +19,7 @@ export default function POIList({
         <ul className="space-y-2">
             {pois.map((poi, index) => (
                 <POIItem
-                    key={poi.id}
+                    key={index}
                     poi={poi}
                     onMoveUp={() => onMoveUp(index)}
                     onMoveDown={() => onMoveDown(index)}
