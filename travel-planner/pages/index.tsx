@@ -1,115 +1,59 @@
-import Image from "next/image";
-import { Geist, Geist_Mono } from "next/font/google";
+import Link from "next/link";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+function Feature({ title, desc }: { title: string; desc: string }) {
+  return (
+    <div className="rounded-2xl border p-6 shadow-sm bg-white/70">
+      <h3 className="font-semibold">{title}</h3>
+      <p className="mt-2 text-sm text-slate-600">{desc}</p>
+    </div>
+  );
+}
 
 export default function Home() {
   return (
-    <div
-      className={`${geistSans.className} ${geistMono.className} font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20`}
-    >
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              pages/index.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <main className="min-h-screen bg-gradient-to-b from-white to-slate-50 text-slate-900">
+      <div className="mx-auto max-w-5xl px-6 py-20">
+        <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight">
+          TravelPlanner
+        </h1>
+        <p className="mt-4 text-lg text-slate-600">
+          Plan trips, build itineraries, and explore with AI.
+        </p>
+
+        <div className="mt-8 flex flex-col sm:flex-row gap-4">
+          <Link
+            href="/plan"
+            className="rounded-xl bg-black text-white px-6 py-3 text-center hover:opacity-90"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            Plan a Trip
+          </Link>
+          <Link
+            href="/itineraries"
+            className="rounded-xl border px-6 py-3 text-center hover:bg-slate-100"
           >
-            Read our docs
-          </a>
+            My Itineraries
+          </Link>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+
+        <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <Feature
+            title="Smart Planning"
+            desc="Chat with AI to craft day-by-day plans."
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+          <Feature
+            title="Maps Integration"
+            desc="Search places and visualize routes with Google Maps."
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
+          <Feature
+            title="Save & Revisit"
+            desc="Store itineraries and continue planning anytime."
           />
-          Go to nextjs.org →
-        </a>
+        </div>
+      </div>
+
+      <footer className="py-8 text-center text-sm text-slate-500">
+        © {new Date().getFullYear()} TravelPlanner
       </footer>
-    </div>
+    </main>
   );
 }
