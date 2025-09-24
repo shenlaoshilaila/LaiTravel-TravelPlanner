@@ -1,3 +1,0 @@
-# LaiTravel TravelPlanner
-# Hello World!
-
