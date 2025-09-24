@@ -1,4 +1,3 @@
-// app/ClientNavbar.tsx
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -41,17 +40,14 @@ export default function ClientNavbar() {
         }
     }, []);
 
-    // 1) On mount
     useEffect(() => {
         checkAuth();
     }, [checkAuth]);
 
-    // 2) Re-check on route changes (e.g., after login redirect)
     useEffect(() => {
         checkAuth();
     }, [pathname, checkAuth]);
 
-    // 3) Re-check on tab focus
     useEffect(() => {
         const onFocus = () => checkAuth();
         window.addEventListener("focus", onFocus);
@@ -67,12 +63,12 @@ export default function ClientNavbar() {
         } catch {}
         setIsLoggedIn(false);
         setUsername("");
-        router.push("/");     // ⬅️ go to Home
+        router.push("/");
         router.refresh();
     }
 
     return (
-        <header className="sticky top-0 z-40 w-full border-b bg-blue-600 text-white">
+        <header className="sticky top-0 z-40 w-full border-b bg-blue-300 text-black">
             <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
                 <Link href="/" prefetch={false} className="font-semibold text-lg">
                     Travel Planner
@@ -93,12 +89,12 @@ export default function ClientNavbar() {
                 <div className="flex items-center gap-3">
                     {isLoggedIn ? (
                         <>
-              <span className="hidden sm:inline">
-                {checking ? "…" : `Hello, ${username}`}
-              </span>
+                            <span className="hidden sm:inline">
+                                {checking ? "…" : `Hello, ${username}`}
+                            </span>
                             <button
                                 onClick={handleLogout}
-                                className="rounded border border-white/40 px-3 py-1 hover:bg-white/10"
+                                className="rounded border border-black/40 px-3 py-1 hover:bg-black/10"
                             >
                                 Logout
                             </button>
@@ -108,14 +104,14 @@ export default function ClientNavbar() {
                             <Link
                                 href="/login"
                                 prefetch={false}
-                                className="rounded bg-white/20 px-3 py-1 hover:bg-white/30"
+                                className="rounded bg-black/10 px-3 py-1 hover:bg-black/20"
                             >
                                 Login
                             </Link>
                             <Link
                                 href="/register"
                                 prefetch={false}
-                                className="rounded border border-white/40 px-3 py-1 hover:bg-white/10"
+                                className="rounded border border-black/40 px-3 py-1 hover:bg-black/10"
                             >
                                 Register
                             </Link>
