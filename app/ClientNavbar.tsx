@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
+const API_BASE = "https://travelplanner-720040112489.us-east1.run.app";
 const PATHS = {
     me: "/auth/me",
     logout: "/auth/logout",
