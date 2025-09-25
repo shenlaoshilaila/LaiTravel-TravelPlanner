@@ -20,9 +20,6 @@ export default function PlannerPage() {
     const [days, setDays] = useState(1);
     const [dayPOIs, setDayPOIs] = useState<DayPOI[]>([]);
     const [selectedDay, setSelectedDay] = useState<number | null>(1);
-    const [searchKeyword, setSearchKeyword] = useState("MALL");
-    const [isSearching, setIsSearching] = useState(false);
-    const [searchError, setSearchError] = useState<string | null>(null);
 
     // Auth is OPTIONAL: we fetch it, but never block rendering.
     const [user, setUser] = useState<User>(null);
@@ -62,36 +59,6 @@ export default function PlannerPage() {
         });
         setSelectedDay(1);
     }, [days]);
-
-    // Function to search for POIs
-    const searchPOIs = async (city: string, keyword: string) => {
-        setIsSearching(true);
-        setSearchError(null);
-        
-        try {
-            const response = await fetch(
-                `${BACKEND_URL}/pois?city=${encodeURIComponent(city)}&keyword=${encodeURIComponent(keyword)}`
-            );
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const pois: POI[] = await response.json();
-            
-            // Update the first day with the search results
-            if (pois.length > 0) {
-                updatePOIsForDay(1, pois);
-            } else {
-                setSearchError("No results found for your search.");
-            }
-        } catch (error) {
-            console.error("Search error:", error);
-            setSearchError("Failed to search for POIs. Please try again.");
-        } finally {
-            setIsSearching(false);
-        }
-    };
 
     const updatePOIsForDay = (day: number, newPois: POI[]) => {
         setDayPOIs((prev) =>
@@ -142,29 +109,7 @@ export default function PlannerPage() {
                         onDaysChange={setDays}
                     />
 
-                    {/* Search Section */}
-                    <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                        <h3 className="text-lg font-semibold mb-2">Search for POIs</h3>
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                value={searchKeyword}
-                                onChange={(e) => setSearchKeyword(e.target.value)}
-                                placeholder="Enter keyword (e.g., MALL)"
-                                className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
-                            />
-                            <button
-                                onClick={() => searchPOIs(city, searchKeyword)}
-                                disabled={isSearching}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300"
-                            >
-                                {isSearching ? "Searching..." : "Search"}
-                            </button>
-                        </div>
-                        {searchError && (
-                            <p className="text-red-500 text-sm mt-2">{searchError}</p>
-                        )}
-                    </div>
+                    {/* Removed Search for POIs Section */}
 
                     <div className="mt-6 space-y-6">
                         <h2 className="text-lg font-semibold">Your Itinerary by Day</h2>
@@ -212,13 +157,12 @@ export default function PlannerPage() {
                 </div>
             </div>
 
-            {/* Floating AI Chat Bar (renders for guests; your backend can decide what features need auth) */}
-            <AIChatBar 
-                city={city} 
-                days={days} 
-                selectedDay={selectedDay} 
-                dayPOIs={dayPOIs} 
-
+            {/* Floating AI Chat Bar */}
+            <AIChatBar
+                city={city}
+                days={days}
+                selectedDay={selectedDay}
+                dayPOIs={dayPOIs}
             />
         </main>
     );
