@@ -38,11 +38,13 @@ export default function ItinerariesPage() {
                 headers: { "Content-Type": "application/json" },
             });
 
-            if (response.status === 401) {
+            // ✅ Treat both 401 and 403 as "not logged in"
+            if (response.status === 401 || response.status === 403) {
                 setIsAuthenticated(false);
                 setItineraries([]);
                 return;
             }
+
             if (!response.ok) {
                 throw new Error(
                     `Failed to fetch itineraries: ${response.status} ${response.statusText}`
@@ -85,7 +87,7 @@ export default function ItinerariesPage() {
                 credentials: "include",
             });
 
-            if (res.status === 401) {
+            if (res.status === 401 || res.status === 403) {
                 setIsAuthenticated(false);
                 return;
             }
@@ -223,8 +225,8 @@ export default function ItinerariesPage() {
                                                 </h3>
                                                 {isNewest && (
                                                     <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                                                        Newest
-                                                    </span>
+                            Newest
+                          </span>
                                                 )}
                                             </div>
 
