@@ -48,10 +48,13 @@ export default function ItineraryDetailsPage() {
         (async () => {
             try {
                 setLoading(true); setError(null);
-               const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/itinerary/${id}`, {
-                    credentials: "include",
-                    headers: { Accept: "application/json" },
-                });
+                const res = await fetch(
+                    `https://travelplanner-720040112489.us-east1.run.app/api/itinerary/${id}`,
+                    {
+                        credentials: "include",
+                        headers: { Accept: "application/json" },
+                    }
+                );
                 if (res.status === 401) { router.push("/login"); return; }
                 if (!res.ok) throw new Error(`Failed to load itinerary ${id}: ${res.status} ${res.statusText}`);
                 setData((await res.json()) as Itinerary);
@@ -107,7 +110,6 @@ export default function ItineraryDetailsPage() {
                                         <div key={`${p.id ?? i}`}>
                                             <div className="font-semibold text-2xl mb-1">{p.name}</div>
 
-                                            {/* Segment AFTER this POI to the next one (no next-POI name; just a down arrow) */}
                                             {i < pois.length - 1 && (
                                                 <div className="pl-3 mt-1 mb-3 text-sm text-gray-600 flex items-center">
                                                     <span className="inline-block mr-2 text-lg">↓</span>

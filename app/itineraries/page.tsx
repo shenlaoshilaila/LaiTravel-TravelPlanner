@@ -13,6 +13,8 @@ interface Itinerary {
     createdAt: string;
 }
 
+const API_BASE = "https://travelplanner-720040112489.us-east1.run.app";
+
 export default function ItinerariesPage() {
     const [itineraries, setItineraries] = useState<Itinerary[]>([]);
     const [loading, setLoading] = useState(true);
@@ -30,7 +32,7 @@ export default function ItinerariesPage() {
             setLoading(true);
             setError(null);
 
-            const response = await fetch("http://localhost:8080/api/itinerary/mine", {
+            const response = await fetch(`${API_BASE}/api/itinerary/mine`, {
                 method: "GET",
                 credentials: "include",
                 headers: { "Content-Type": "application/json" },
@@ -78,7 +80,7 @@ export default function ItinerariesPage() {
         setError(null);
 
         try {
-            const res = await fetch(`http://localhost:8080/api/itinerary/${id}`, {
+            const res = await fetch(`${API_BASE}/api/itinerary/${id}`, {
                 method: "DELETE",
                 credentials: "include",
             });
@@ -221,8 +223,8 @@ export default function ItinerariesPage() {
                                                 </h3>
                                                 {isNewest && (
                                                     <span className="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
-                            Newest
-                          </span>
+                                                        Newest
+                                                    </span>
                                                 )}
                                             </div>
 
