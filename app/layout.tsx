@@ -2,7 +2,7 @@
 import "./globals.css";
 import React from "react";
 import type { Metadata } from "next";
-import ClientLayoutWrapper from "./ClientLayoutWrapper"; // Import the client wrapper
+import ClientLayoutWrapper from "./ClientLayoutWrapper";
 
 export const metadata: Metadata = {
     title: "Travel Planner",
@@ -13,7 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     return (
         <html lang="zh">
         <body className="bg-white text-gray-900">
-        {/* Wrap everything in the client component */}
+        {/* Google Maps loader is handled in ClientLayoutWrapper */}
         <ClientLayoutWrapper>{children}</ClientLayoutWrapper>
         </body>
         </html>

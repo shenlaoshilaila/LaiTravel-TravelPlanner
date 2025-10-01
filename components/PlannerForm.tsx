@@ -1,6 +1,6 @@
 "use client";
 import React, { useRef } from "react";
-import { Autocomplete, LoadScript } from "@react-google-maps/api";
+import { Autocomplete } from "@react-google-maps/api";
 
 interface PlannerFormProps {
     city: string;
@@ -8,8 +8,6 @@ interface PlannerFormProps {
     onCityChange: (city: string) => void;
     onDaysChange: (days: number) => void;
 }
-
-const libraries: ("places")[] = ["places"];
 
 export default function PlannerForm({
                                         city,
@@ -32,26 +30,21 @@ export default function PlannerForm({
 
     return (
         <div className="space-y-4">
-            {/* Load Google Maps JS API */}
-            <LoadScript
-                googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}
-                libraries={libraries}
-            >
-                <div>
-                    <label className="block font-medium">Select City:</label>
-                    <Autocomplete
-                        onLoad={(autocomplete) => (autocompleteRef.current = autocomplete)}
-                        onPlaceChanged={handlePlaceChanged}
-                    >
-                        <input
-                            type="text"
-                            defaultValue={city}
-                            placeholder="Start typing a city..."
-                            className="w-full border px-3 py-1 rounded"
-                        />
-                    </Autocomplete>
-                </div>
-            </LoadScript>
+            {/* City autocomplete input */}
+            <div>
+                <label className="block font-medium">Select City:</label>
+                <Autocomplete
+                    onLoad={(autocomplete) => (autocompleteRef.current = autocomplete)}
+                    onPlaceChanged={handlePlaceChanged}
+                >
+                    <input
+                        type="text"
+                        defaultValue={city}
+                        placeholder="Start typing a city..."
+                        className="w-full border px-3 py-1 rounded"
+                    />
+                </Autocomplete>
+            </div>
 
             {/* Travel days input */}
             <div>
