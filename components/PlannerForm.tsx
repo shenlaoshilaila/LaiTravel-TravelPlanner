@@ -1,6 +1,6 @@
 "use client";
-import React, { useState } from "react";
-import { fetchCitySuggestions } from "./api";
+import React, { useRef } from "react";
+import { Autocomplete, LoadScript } from "@react-google-maps/api";
 
 interface PlannerFormProps {
     city: string;
@@ -9,88 +9,60 @@ interface PlannerFormProps {
     onDaysChange: (days: number) => void;
 }
 
+const libraries: ("places")[] = ["places"];
+
 export default function PlannerForm({
                                         city,
                                         days,
                                         onCityChange,
                                         onDaysChange,
                                     }: PlannerFormProps) {
-    const [suggestions, setSuggestions] = useState<
-        { description: string; placeId: string }[]
-    >([]);
-    const [loading, setLoading] = useState(false);
+    const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
-    const handleCityInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        onCityChange(value);
-
-        if (value.length > 1) {
-            setLoading(true);
-            try {
-                const results = await fetchCitySuggestions(value);
-                console.log("✅ Suggestions from Google:", results); // debug
-                setSuggestions(results);
-            } catch (err) {
-                console.error("❌ City autocomplete error:", err);
-                setSuggestions([]);
-            } finally {
-                setLoading(false);
+    const handlePlaceChanged = () => {
+        if (autocompleteRef.current) {
+            const place = autocompleteRef.current.getPlace();
+            if (place.formatted_address) {
+                onCityChange(place.formatted_address);
+            } else if (place.name) {
+                onCityChange(place.name);
             }
-        } else {
-            setSuggestions([]);
         }
-    };
-
-    const handleSelect = (description: string) => {
-        onCityChange(description);
-        setSuggestions([]); // close dropdown
     };
 
     return (
         <div className="space-y-4">
-            {/* City autocomplete input */}
-            <div className="relative">
-                <label className="block font-medium mb-1">Select City:</label>
-                <input
-                    type="text"
-                    value={city}
-                    onChange={handleCityInput}
-                    className="w-full border px-3 py-2 rounded"
-                    placeholder="Start typing a city..."
-                />
-
-                {/* Suggestions dropdown */}
-                {suggestions.length > 0 && (
-                    <ul className="absolute left-0 right-0 border rounded bg-white shadow mt-1 max-h-40 overflow-y-auto z-10">
-                        {suggestions.map((s) => (
-                            <li
-                                key={s.placeId}
-                                onClick={() => handleSelect(s.description)}
-                                className="p-2 hover:bg-gray-100 cursor-pointer"
-                            >
-                                {s.description}
-                            </li>
-                        ))}
-                    </ul>
-                )}
-
-                {loading && (
-                    <div className="absolute right-2 top-2 text-sm text-gray-400">
-                        Loading…
-                    </div>
-                )}
-            </div>
+            {/* Load Google Maps JS API */}
+            <LoadScript
+                googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}
+                libraries={libraries}
+            >
+                <div>
+                    <label className="block font-medium">Select City:</label>
+                    <Autocomplete
+                        onLoad={(autocomplete) => (autocompleteRef.current = autocomplete)}
+                        onPlaceChanged={handlePlaceChanged}
+                    >
+                        <input
+                            type="text"
+                            defaultValue={city}
+                            placeholder="Start typing a city..."
+                            className="w-full border px-3 py-1 rounded"
+                        />
+                    </Autocomplete>
+                </div>
+            </LoadScript>
 
             {/* Travel days input */}
             <div>
-                <label className="block font-medium mb-1">Travel Days:</label>
+                <label className="block font-medium">Travel Days:</label>
                 <input
                     type="number"
                     value={days}
                     min={1}
                     max={15}
                     onChange={(e) => onDaysChange(parseInt(e.target.value))}
-                    className="w-full border px-3 py-2 rounded"
+                    className="w-full border px-3 py-1 rounded"
                 />
             </div>
         </div>
