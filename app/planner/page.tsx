@@ -8,7 +8,6 @@ import { POI, DayPOI } from "@/components/types";
 import { useRouter } from "next/navigation";
 import AIChatBar from "@/components/AIChatBar";
 
-// Define your backend URL directly
 const BACKEND_URL = "https://travelplanner-720040112489.us-east1.run.app";
 
 type User = { id: string; name?: string } | null;
@@ -16,15 +15,15 @@ type User = { id: string; name?: string } | null;
 export default function PlannerPage() {
     const router = useRouter();
 
-    const [city, setCity] = useState("Beijing");
+    const [city, setCity] = useState<string>(""); // user picks dynamically
     const [days, setDays] = useState(1);
     const [dayPOIs, setDayPOIs] = useState<DayPOI[]>([]);
     const [selectedDay, setSelectedDay] = useState<number | null>(1);
 
-    // Auth is OPTIONAL: we fetch it, but never block rendering.
     const [user, setUser] = useState<User>(null);
     const [authChecked, setAuthChecked] = useState(false);
 
+    // 🔐 Fetch current user (auth)
     useEffect(() => {
         let cancelled = false;
         (async () => {
@@ -36,7 +35,6 @@ export default function PlannerPage() {
                     const u = await r.json();
                     if (!cancelled) setUser(u);
                 }
-                // If 401 or any error, we stay as guest (null user).
             } catch (error) {
                 console.error("Auth error:", error);
             } finally {
@@ -48,6 +46,7 @@ export default function PlannerPage() {
         };
     }, []);
 
+    // 🔄 Update dayPOIs whenever days changes
     useEffect(() => {
         setDayPOIs((prev) => {
             const updated: DayPOI[] = [];
@@ -89,13 +88,12 @@ export default function PlannerPage() {
         <main className="p-6 max-w-6xl mx-auto">
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold mb-4 text-center">
-                    Itinerary Planner - {city}
+                    Itinerary Planner {city && `- ${city}`}
                 </h1>
-                {/* Tiny status chip (optional) */}
                 {authChecked && (
                     <span className="text-xs px-2 py-1 rounded bg-slate-100">
-                        {user ? `Signed in` : `Guest mode`}
-                    </span>
+            {user ? `Signed in` : `Guest mode`}
+          </span>
                 )}
             </div>
 
@@ -108,8 +106,6 @@ export default function PlannerPage() {
                         onCityChange={setCity}
                         onDaysChange={setDays}
                     />
-
-                    {/* Removed Search for POIs Section */}
 
                     <div className="mt-6 space-y-6">
                         <h2 className="text-lg font-semibold">Your Itinerary by Day</h2>
@@ -127,7 +123,6 @@ export default function PlannerPage() {
                             />
                         ))}
 
-                        {/* Save plan: enabled only when signed in */}
                         {user ? (
                             <SavePlanButton
                                 planData={{ city, days, pois: allPois }}
@@ -151,13 +146,12 @@ export default function PlannerPage() {
                     </div>
                 </div>
 
-                {/* Right: Map — always renders for guests too */}
+                {/* Right: Map */}
                 <div className="h-[500px]">
                     <PlannerMap pois={currentDayPois} />
                 </div>
             </div>
 
-            {/* Floating AI Chat Bar */}
             <AIChatBar
                 city={city}
                 days={days}
