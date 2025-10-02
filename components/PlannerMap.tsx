@@ -1,7 +1,7 @@
 // components/PlannerMap.tsx
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
     GoogleMap,
     Marker,
@@ -12,21 +12,23 @@ import type { Library } from "@googlemaps/js-api-loader"; // type for `libraries
 import { POI } from "./types";
 
 const containerStyle = { width: "100%", height: "500px" };
-const DEFAULT_CENTER = { lat: 39.9042, lng: 116.4074 }; // Beijing
+const DEFAULT_CENTER = { lat: 39.9042, lng: 116.4074 }; // Beijing default
 const LIBRARIES: Library[] = ["places"];
 
 type Props = {
     pois: POI[];
+    center?: { lat: number; lng: number }; // ✅ new prop to override map center
     mode?: "DRIVING" | "WALKING" | "BICYCLING" | "TRANSIT";
     optimizeWaypoints?: boolean;
 };
 
 export default function PlannerMap({
                                        pois,
+                                       center,
                                        mode = "DRIVING",
                                        optimizeWaypoints = false,
                                    }: Props) {
-    // Load Maps JS once (use your **browser** key)
+    // Load Maps JS once
     const { isLoaded, loadError } = useJsApiLoader({
         id: "google-map-script",
         googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY as string,
@@ -37,13 +39,13 @@ export default function PlannerMap({
     const [directions, setDirections] =
         useState<google.maps.DirectionsResult | null>(null);
 
-    const center = useMemo(
-        () => (pois.length ? { lat: pois[0].lat, lng: pois[0].lng } : DEFAULT_CENTER),
-        [pois]
-    );
+    // Fallback center: city center → first POI → Beijing
+    const mapCenter =
+        center ??
+        (pois.length ? { lat: pois[0].lat, lng: pois[0].lng } : DEFAULT_CENTER);
 
     useEffect(() => {
-        if (!isLoaded) return; // wait for Maps JS to be ready
+        if (!isLoaded) return;
         if (pois.length < 2) {
             setDirections(null);
             return;
@@ -87,7 +89,6 @@ export default function PlannerMap({
         (async () => {
             try {
                 const service = new google.maps.DirectionsService();
-                // Promise form avoids the callback overload issues
                 const result = await service.route(request);
                 if (cancelled) return;
 
@@ -112,12 +113,11 @@ export default function PlannerMap({
 
     return (
         <GoogleMap
-            // ✅ explicit type + block so the function returns void
             onLoad={(m: google.maps.Map) => {
                 mapRef.current = m;
             }}
             mapContainerStyle={containerStyle}
-            center={center}
+            center={mapCenter} // ✅ dynamic center
             zoom={12}
         >
             {pois.map((p, idx) => (

@@ -1,40 +1,15 @@
 // components/api.ts
 
-// Your backend (Spring Boot + Cloud Run) base URL
+// ✅ Your backend (Spring Boot + Cloud Run) base URL
 const API_BASE = "https://travelplanner-720040112489.us-east1.run.app".replace(/\/+$/, "");
 
-// --- 1. Google Places Autocomplete (cities) ---
-export async function fetchCitySuggestions(input: string) {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY;
-  if (!apiKey) {
-    throw new Error("Google Places API key is missing. Set NEXT_PUBLIC_GOOGLE_PLACES_API_KEY in .env.local");
-  }
-
-  const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
-      input
-  )}&types=(cities)&key=${apiKey}`;
-
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error(`City autocomplete failed: ${res.status}`);
-  }
-
-  const data = await res.json();
-
-  // Map predictions into simplified objects
-  return data.predictions.map((p: any) => ({
-    description: p.description, // e.g. "Beijing, China"
-    placeId: p.place_id,
-  }));
-}
-
-// --- 2. Your backend POI search ---
+// --- 1. Backend POI search ---
 export async function searchPois(city: string, keyword: string) {
   const url = `${API_BASE}/pois?city=${encodeURIComponent(city)}&keyword=${encodeURIComponent(keyword)}`;
 
   const res = await fetch(url, {
     cache: "no-store",
-    credentials: "include", // keep if you rely on session cookies, otherwise remove
+    credentials: "include", // keep this only if using session cookies; remove for JWT
   });
 
   if (!res.ok) {
@@ -46,4 +21,27 @@ export async function searchPois(city: string, keyword: string) {
     lat: number;
     lng: number;
   }>;
+}
+
+// --- 2. Geocode a city name into lat/lng using Google Maps Geocoding API ---
+export async function geocodeCity(city: string): Promise<{ lat: number; lng: number } | null> {
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    throw new Error("Google Maps API key is missing. Set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in .env.local");
+  }
+
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(city)}&key=${apiKey}`;
+
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Geocoding failed: ${res.status}`);
+  }
+
+  const data = await res.json();
+
+  if (data.status === "OK" && data.results.length > 0) {
+    return data.results[0].geometry.location; // { lat, lng }
+  }
+
+  return null;
 }

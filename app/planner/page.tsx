@@ -7,6 +7,7 @@ import SavePlanButton from "@/components/SavePlanButton";
 import { POI, DayPOI } from "@/components/types";
 import { useRouter } from "next/navigation";
 import AIChatBar from "@/components/AIChatBar";
+import { geocodeCity } from "@/components/api"; // ✅ import geocoding helper
 
 const BACKEND_URL = "https://travelplanner-720040112489.us-east1.run.app";
 
@@ -15,7 +16,8 @@ type User = { id: string; name?: string } | null;
 export default function PlannerPage() {
     const router = useRouter();
 
-    const [city, setCity] = useState<string>(""); // user picks dynamically
+    const [city, setCity] = useState<string>(""); // dynamic city
+    const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number } | null>(null); // ✅ map center
     const [days, setDays] = useState(1);
     const [dayPOIs, setDayPOIs] = useState<DayPOI[]>([]);
     const [selectedDay, setSelectedDay] = useState<number | null>(1);
@@ -58,6 +60,21 @@ export default function PlannerPage() {
         });
         setSelectedDay(1);
     }, [days]);
+
+    // 🌍 Geocode city when it changes
+    useEffect(() => {
+        if (!city) return;
+        (async () => {
+            try {
+                const coords = await geocodeCity(city);
+                if (coords) {
+                    setMapCenter(coords);
+                }
+            } catch (err) {
+                console.error("Geocoding failed:", err);
+            }
+        })();
+    }, [city]);
 
     const updatePOIsForDay = (day: number, newPois: POI[]) => {
         setDayPOIs((prev) =>
@@ -127,9 +144,13 @@ export default function PlannerPage() {
                             <SavePlanButton
                                 planData={{ city, days, pois: allPois }}
                                 onPlanSaved={(saved) => {
-                                    const id = (saved as any)?.plan?.id ?? (saved as any)?.id;
+                                    const id =
+                                        (saved as any)?.plan?.id ?? (saved as any)?.id;
                                     if (id) router.push(`/planner/${id}`);
-                                    else console.warn("Saved, but no id returned from backend.");
+                                    else
+                                        console.warn(
+                                            "Saved, but no id returned from backend."
+                                        );
                                 }}
                                 backendUrl={BACKEND_URL}
                             />
@@ -148,7 +169,10 @@ export default function PlannerPage() {
 
                 {/* Right: Map */}
                 <div className="h-[500px]">
-                    <PlannerMap pois={currentDayPois} />
+                    <PlannerMap
+                        pois={currentDayPois}
+                        center={mapCenter ?? { lat: 39.9042, lng: 116.4074 }} // ✅ default Beijing until user picks city
+                    />
                 </div>
             </div>
 
