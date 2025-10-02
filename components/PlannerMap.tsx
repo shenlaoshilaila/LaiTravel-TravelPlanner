@@ -1,40 +1,59 @@
-"use client";
-import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
+import React, { useEffect, useRef } from "react";
 import { POI } from "./types";
 
-const containerStyle = {
-    width: "100%",
-    height: "100%", // ✅ ensures it fills parent
-};
-
-const defaultCenter = { lat: 39.9042, lng: 116.4074 }; // Beijing fallback
-
-interface Props {
+interface PlannerMapProps {
     pois: POI[];
 }
 
-export default function PlannerMap({ pois }: Props) {
-    const { isLoaded } = useJsApiLoader({
-        id: "google-map-script",
-        googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "",
-    });
+export default function PlannerMap({ pois }: PlannerMapProps) {
+    const mapRef = useRef<HTMLDivElement | null>(null);
+    const mapInstance = useRef<google.maps.Map | null>(null);
+    const directionsService = useRef<google.maps.DirectionsService | null>(null);
+    const directionsRenderer = useRef<google.maps.DirectionsRenderer | null>(null);
 
-    if (!isLoaded) return <div className="w-full h-full">Loading map...</div>;
+    useEffect(() => {
+        if (mapRef.current && !mapInstance.current && (window as any).google) {
+            mapInstance.current = new google.maps.Map(mapRef.current, {
+                center: { lat: 30.2741, lng: 120.1551 }, // Hangzhou default
+                zoom: 12,
+            });
+            directionsService.current = new google.maps.DirectionsService();
+            directionsRenderer.current = new google.maps.DirectionsRenderer({
+                suppressMarkers: false,
+            });
+            directionsRenderer.current.setMap(mapInstance.current);
+        }
+    }, []);
 
-    const center =
-        pois.length > 0
-            ? { lat: pois[0].lat, lng: pois[0].lng }
-            : defaultCenter;
+    useEffect(() => {
+        if (!mapInstance.current || !directionsService.current || !directionsRenderer.current) return;
 
-    return (
-        <GoogleMap
-            mapContainerStyle={containerStyle}
-            center={center}
-            zoom={12}
-        >
-            {pois.map((poi, i) => (
-                <Marker key={i} position={{ lat: poi.lat, lng: poi.lng }} />
-            ))}
-        </GoogleMap>
-    );
+        if (pois.length < 2) {
+            directionsRenderer.current.setDirections({ routes: [] } as any); // clear
+            return;
+        }
+
+        const waypoints = pois.slice(1, -1).map((p) => ({
+            location: { lat: p.lat, lng: p.lng },
+            stopover: true,
+        }));
+
+        directionsService.current.route(
+            {
+                origin: { lat: pois[0].lat, lng: pois[0].lng },
+                destination: { lat: pois[pois.length - 1].lat, lng: pois[pois.length - 1].lng },
+                waypoints,
+                travelMode: google.maps.TravelMode.DRIVING,
+            },
+            (result, status) => {
+                if (status === google.maps.DirectionsStatus.OK && result) {
+                    directionsRenderer.current?.setDirections(result);
+                } else {
+                    console.error("Directions failed:", status);
+                }
+            }
+        );
+    }, [pois]);
+
+    return <div ref={mapRef} className="w-full h-full" />;
 }
