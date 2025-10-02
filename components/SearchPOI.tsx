@@ -19,7 +19,12 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
 
     // Initialize PlacesService once Google Maps API is available
     useEffect(() => {
-        if (mapRef.current && !serviceRef.current && typeof window !== "undefined" && (window as any).google) {
+        if (
+            mapRef.current &&
+            !serviceRef.current &&
+            typeof window !== "undefined" &&
+            (window as any).google
+        ) {
             const dummyMap = new google.maps.Map(mapRef.current);
             serviceRef.current = new google.maps.places.PlacesService(dummyMap);
         }
@@ -41,7 +46,11 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
         serviceRef.current.textSearch({ query: text }, (places, status) => {
             setLoading(false);
 
-            if (status === google.maps.places.PlacesServiceStatus.OK && places && places.length > 0) {
+            if (
+                status === google.maps.places.PlacesServiceStatus.OK &&
+                places &&
+                places.length > 0
+            ) {
                 setResults(places);
             } else {
                 console.warn("Places search failed:", status);
@@ -49,6 +58,33 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                 setResults([]);
             }
         });
+    };
+
+    const handlePick = (p: google.maps.places.PlaceResult) => {
+        if (p.geometry?.location) {
+            onPick({
+                name: p.name ?? "Unknown",
+                lat: p.geometry.location.lat(),
+                lng: p.geometry.location.lng(),
+                sequence: 0,
+                day: 0,
+            });
+        }
+        // Clear input + results after picking
+        setQuery("");
+        setResults([]);
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            if (results.length > 0) {
+                // Auto pick the first result
+                handlePick(results[0]);
+            } else {
+                handleSearch();
+            }
+        }
     };
 
     return (
@@ -62,6 +98,7 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                     placeholder={placeholder ?? "Search places..."}
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={handleKeyDown}
                     className="border px-2 py-1 rounded w-full"
                 />
                 <button
@@ -81,20 +118,12 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                     <li
                         key={i}
                         className="cursor-pointer p-2 border rounded hover:bg-gray-100"
-                        onClick={() => {
-                            if (p.geometry?.location) {
-                                onPick({
-                                    name: p.name ?? "Unknown",
-                                    lat: p.geometry.location.lat(),
-                                    lng: p.geometry.location.lng(),
-                                    sequence: 0,
-                                    day: 0,
-                                });
-                            }
-                        }}
+                        onClick={() => handlePick(p)}
                     >
                         <div className="font-medium">{p.name}</div>
-                        <div className="text-sm text-gray-600">{p.formatted_address ?? ""}</div>
+                        <div className="text-sm text-gray-600">
+                            {p.formatted_address ?? ""}
+                        </div>
                     </li>
                 ))}
             </ul>
