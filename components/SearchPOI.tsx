@@ -1,6 +1,6 @@
 "use client";
+
 import React, { useState } from "react";
-import { searchPois } from "./api";
 
 type PoiLite = { name: string; lat: number; lng: number };
 
@@ -21,14 +21,38 @@ export default function SearchPOI({
     const [loading, setLoading] = useState<boolean>(false);
 
     const handleSearch = async () => {
-        const citySafe = city || "Beijing";
         if (!q.trim()) return;
         setLoading(true);
         try {
-            const data = await searchPois(city, q); // GET /pois
-            setResults(data);
-            setOpen(true);
-        } catch {
+            const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+            if (!apiKey) {
+                throw new Error("Missing Google Maps API Key. Add it to .env.local.");
+            }
+
+            // 🔹 Build query: include city + keyword
+            const query = `${q} in ${city || "Beijing"}`;
+            const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(
+                query
+            )}&key=${apiKey}`;
+
+            const res = await fetch(url);
+            const data = await res.json();
+
+            if (data.status === "OK") {
+                const pois: PoiLite[] = data.results.map((r: any) => ({
+                    name: r.name,
+                    lat: r.geometry.location.lat,
+                    lng: r.geometry.location.lng,
+                }));
+                setResults(pois);
+                setOpen(true);
+            } else {
+                console.warn("Google Places API error:", data.status, data.error_message);
+                setResults([]);
+                setOpen(false);
+            }
+        } catch (err) {
+            console.error("Search error:", err);
             setResults([]);
             setOpen(false);
         } finally {
@@ -45,7 +69,10 @@ export default function SearchPOI({
                     placeholder={placeholder}
                     className="flex-1 border px-3 py-2 rounded"
                 />
-                <button onClick={handleSearch} className="px-4 py-2 rounded bg-blue-500 text-white">
+                <button
+                    onClick={handleSearch}
+                    className="px-4 py-2 rounded bg-blue-500 text-white"
+                >
                     {loading ? "…" : "Search"}
                 </button>
             </div>
@@ -63,7 +90,8 @@ export default function SearchPOI({
                             }}
                             className="block w-full text-left px-3 py-2 hover:bg-gray-100"
                         >
-                            {r.name} <span className="opacity-60 text-sm">
+                            {r.name}{" "}
+                            <span className="opacity-60 text-sm">
                 ({r.lat.toFixed(4)}, {r.lng.toFixed(4)})
               </span>
                         </button>

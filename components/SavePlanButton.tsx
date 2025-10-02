@@ -4,9 +4,10 @@ import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { PlanSavedResponse, SavePlanButtonProps, POI, DayPOI } from "./types";
 
-// ✅ Convert either DayPOI[] or POI[] into flat POI[]
+// ✅ Convert DayPOI[] or POI[] into flat POI[]
 function toFlatPois(poisGroupedOrFlat: DayPOI[] | POI[]): POI[] {
     if (!poisGroupedOrFlat || (poisGroupedOrFlat as any[]).length === 0) return [];
+
     const first: any = (poisGroupedOrFlat as any[])[0];
 
     if (first && typeof first === "object" && "pois" in first) {
@@ -18,7 +19,7 @@ function toFlatPois(poisGroupedOrFlat: DayPOI[] | POI[]): POI[] {
                 out.push({
                     ...p,
                     day: d.day,
-                    city: d.city, // ✅ carry per-day city
+                    city: d.city ?? "", // ✅ ensure city is carried
                 });
             }
         }
@@ -28,6 +29,7 @@ function toFlatPois(poisGroupedOrFlat: DayPOI[] | POI[]): POI[] {
     // ---- Already flat POI[] ----
     const flat = poisGroupedOrFlat as POI[];
     return flat
+        .map((p) => ({ ...p, city: p.city ?? "" })) // ✅ ensure city exists
         .slice()
         .sort((a, b) => a.day - b.day || a.sequence - b.sequence);
 }
@@ -57,11 +59,13 @@ export default function SavePlanButton({
         setMessage("");
 
         try {
-            // 1️⃣ Build backend payload
+            // 1️⃣ Build payload for backend
             const backendFormat = {
                 days: planData.days,
                 pois: toFlatPois(planData.pois),
             };
+
+            console.log("📤 Sending payload:", backendFormat);
 
             // 2️⃣ Headers
             const bearer = auth?.jwt ?? auth?.accessToken ?? null;
@@ -79,7 +83,7 @@ export default function SavePlanButton({
             });
 
             if (res.status === 401) {
-                setMessage("Please login to save plans");
+                setMessage("⚠️ Please login to save plans");
                 return;
             }
             if (!res.ok) {
@@ -87,7 +91,7 @@ export default function SavePlanButton({
                 throw new Error(`Save failed: ${res.status} ${t}`);
             }
 
-            // 4️⃣ Parse response
+            // 4️⃣ Parse response safely
             let saved: PlanSavedResponse | undefined;
             let savedId: string | undefined;
 
@@ -97,7 +101,7 @@ export default function SavePlanButton({
                     saved = JSON.parse(text) as PlanSavedResponse;
                     savedId = (saved as any)?.id ?? (saved as any)?.plan?.id;
                 } catch {
-                    // ignore parse errors if not JSON
+                    console.warn("⚠️ Response not JSON, raw text:", text);
                 }
             }
 
@@ -112,9 +116,9 @@ export default function SavePlanButton({
 
             // 6️⃣ Trigger callback
             onPlanSaved?.(saved ?? ({ id: savedId } as any));
-            setMessage("Plan saved successfully!");
+            setMessage("✅ Plan saved successfully!");
         } catch (e: any) {
-            console.error("Save error:", e);
+            console.error("❌ Save error:", e);
             setMessage(e?.message ?? "Error saving plan");
         } finally {
             setIsSaving(false);
