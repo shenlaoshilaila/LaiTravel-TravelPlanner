@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import SearchPOI from "./SearchPOI";
 import { POI } from "./types";
+import { Autocomplete } from "@react-google-maps/api";
 
 interface Props {
   day: number;
   initialPois: POI[];
-  city?: string; // ✅ make optional (can be empty at start)
+  city?: string; // ✅ make optional
   itineraryId?: string;
   isActive: boolean;
   onUpdatePois: (day: number, next: POI[]) => void;
@@ -67,7 +68,10 @@ async function fetchSegInfo(
   if (MODE === "mock") {
     const mins = haversineMinutes(p1, p2);
     const km = haversineKm(p1, p2);
-    return { durationText: `${mins} min drive`, distanceText: `${km.toFixed(1)} km` };
+    return {
+      durationText: `${mins} min drive`,
+      distanceText: `${km.toFixed(1)} km`,
+    };
   }
 
   const body = {
@@ -77,7 +81,8 @@ async function fetchSegInfo(
   };
 
   try {
-    const url = MODE === "nextapi" ? "/api/distance" : `${backendUrl}/api/distance`;
+    const url =
+        MODE === "nextapi" ? "/api/distance" : `${backendUrl}/api/distance`;
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -119,7 +124,10 @@ async function fetchSegInfo(
   } catch {
     const mins = haversineMinutes(p1, p2);
     const km = haversineKm(p1, p2);
-    return { durationText: `${mins} min drive`, distanceText: `${km.toFixed(1)} km` };
+    return {
+      durationText: `${mins} min drive`,
+      distanceText: `${km.toFixed(1)} km`,
+    };
   }
 }
 
@@ -135,6 +143,7 @@ export default function DayPOISection({
                                         backendUrl,
                                       }: Props) {
   const pois = initialPois;
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
 
   const [segInfoMap, setSegInfoMap] = useState<Record<string, SegInfo>>({});
   const [loadingKeys, setLoadingKeys] = useState<Record<string, boolean>>({});
@@ -182,7 +191,9 @@ export default function DayPOISection({
   };
 
   return (
-      <div className={`rounded border p-4 ${isActive ? "bg-blue-50" : "bg-white"}`}>
+      <div
+          className={`rounded border p-4 ${isActive ? "bg-blue-50" : "bg-white"}`}
+      >
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold">Day {day}</h3>
           <button className="text-sm opacity-70" onClick={() => onSelectDay(day)}>
@@ -190,19 +201,34 @@ export default function DayPOISection({
           </button>
         </div>
 
-        {/* ✅ Per-day city input */}
+        {/* ✅ Per-day city input with Google Autocomplete */}
         <div className="mb-3">
           <label className="block text-sm font-medium mb-1">Select City:</label>
-          <input
-              type="text"
-              value={city ?? ""} // ✅ safe fallback
-              onChange={(e) => onCityChange(day, e.target.value)}
-              placeholder="e.g. Shanghai, China"
-              className="border px-2 py-1 rounded w-full"
-          />
+          <Autocomplete
+              onLoad={(ac) => (autocompleteRef.current = ac)}
+              onPlaceChanged={() => {
+                const place = autocompleteRef.current?.getPlace();
+                if (place?.formatted_address) {
+                  onCityChange(day, place.formatted_address);
+                } else if (place?.name) {
+                  onCityChange(day, place.name);
+                }
+              }}
+          >
+            <input
+                type="text"
+                defaultValue={city ?? ""}
+                placeholder="e.g. Shanghai, China"
+                className="border px-2 py-1 rounded w-full"
+            />
+          </Autocomplete>
         </div>
 
-        <SearchPOI city={city ?? ""} onPick={handlePick} placeholder="Type e.g. 博物馆 / museum…" />
+        <SearchPOI
+            city={city ?? ""}
+            onPick={handlePick}
+            placeholder="Type e.g. 博物馆 / museum…"
+        />
 
         <ol className="mt-3 space-y-2 list-decimal pl-5">
           {pois.map((p, i) => {
