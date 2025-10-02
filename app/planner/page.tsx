@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import DayPOISection from "@/components/DayPOISection";
 import PlannerMap from "@/components/PlannerMap";
 import SavePlanButton from "@/components/SavePlanButton";
-import { POI, DayPOI } from "@/components/types";
+import { POI, DayPOI, PlanData } from "@/components/types";
 import { useRouter } from "next/navigation";
 import AIChatBar from "@/components/AIChatBar";
 
@@ -14,8 +14,9 @@ type User = { id: string; name?: string } | null;
 export default function PlannerPage() {
     const router = useRouter();
 
-    const [days, setDays] = useState(1);
-    const [dayPOIs, setDayPOIs] = useState<DayPOI[]>([{ day: 1, city: "", pois: [] }]);
+    const [startDate, setStartDate] = useState<string>("");
+    const [endDate, setEndDate] = useState<string>("");
+    const [dayPOIs, setDayPOIs] = useState<DayPOI[]>([]);
     const [selectedDay, setSelectedDay] = useState<number | null>(1);
 
     const [user, setUser] = useState<User>(null);
@@ -25,7 +26,9 @@ export default function PlannerPage() {
     useEffect(() => {
         (async () => {
             try {
-                const r = await fetch(`${BACKEND_URL}/auth/me`, { credentials: "include" });
+                const r = await fetch(`${BACKEND_URL}/auth/me`, {
+                    credentials: "include",
+                });
                 if (r.ok) {
                     setUser(await r.json());
                 }
@@ -37,17 +40,28 @@ export default function PlannerPage() {
         })();
     }, []);
 
-    // 🔄 When days changes, adjust dayPOIs length
+    // 🗓️ Generate days when startDate & endDate are selected
     useEffect(() => {
-        setDayPOIs((prev) => {
-            const updated: DayPOI[] = [];
-            for (let i = 1; i <= days; i++) {
-                const existing = prev.find((d) => d.day === i);
-                updated.push(existing ?? { day: i, city: "", pois: [] });
-            }
-            return updated;
-        });
-    }, [days]);
+        if (!startDate || !endDate) return;
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+
+        if (start > end) return; // invalid range
+
+        const newDays: DayPOI[] = [];
+        let dayCount = 1;
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            newDays.push({
+                day: dayCount,
+                date: d.toISOString().split("T")[0], // yyyy-mm-dd
+                city: "",
+                pois: [],
+            });
+            dayCount++;
+        }
+        setDayPOIs(newDays);
+        setSelectedDay(1);
+    }, [startDate, endDate]);
 
     // ✅ Update city for a day
     const handleCityChange = (day: number, city: string) => {
@@ -61,19 +75,28 @@ export default function PlannerPage() {
         setDayPOIs((prev) =>
             prev.map((d) =>
                 d.day === day
-                    ? { ...d, pois: newPois.map((p, i) => ({ ...p, sequence: i + 1 })) }
+                    ? {
+                        ...d,
+                        pois: newPois.map((p, i) => ({
+                            ...p,
+                            sequence: i + 1,
+                            date: d.date, // ✅ tie POIs to actual date
+                        })),
+                    }
                     : d
             )
         );
     };
 
+    // ✅ Flatten all POIs
     const allPois = useMemo(
         () =>
             dayPOIs.flatMap((d) =>
                 d.pois.map((poi, i) => ({
                     ...poi,
-                    city: d.city, // ✅ include city with each POI
+                    city: d.city,
                     day: d.day,
+                    date: d.date,
                     sequence: i + 1,
                 }))
             ),
@@ -87,11 +110,34 @@ export default function PlannerPage() {
         <main className="p-6 max-w-6xl mx-auto">
             <h1 className="text-2xl font-bold mb-4">Itinerary Planner</h1>
 
+            {/* 🗓️ Date Range Input */}
+            <div className="flex gap-4 mb-6">
+                <div>
+                    <label className="block text-sm font-medium mb-1">Start Date</label>
+                    <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="border px-3 py-2 rounded"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium mb-1">End Date</label>
+                    <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="border px-3 py-2 rounded"
+                    />
+                </div>
+            </div>
+
             {/* Per-Day Sections */}
-            {dayPOIs.map(({ day, city, pois }) => (
+            {dayPOIs.map(({ day, date, city, pois }) => (
                 <DayPOISection
                     key={day}
                     day={day}
+                    date={date}
                     city={city}
                     initialPois={pois}
                     onUpdatePois={updatePOIsForDay}
@@ -105,7 +151,7 @@ export default function PlannerPage() {
             {/* Save Button */}
             {user ? (
                 <SavePlanButton
-                    planData={{ days, pois: allPois }}
+                    planData={{ startDate, endDate, pois: allPois } as PlanData}
                     onPlanSaved={(saved) => {
                         const id = (saved as any)?.plan?.id ?? (saved as any)?.id;
                         if (id) router.push(`/planner/${id}`);
@@ -121,12 +167,17 @@ export default function PlannerPage() {
                 </button>
             )}
 
-            {/* Right Side Map */}
+            {/* Map */}
             <div className="h-[500px] mt-6">
                 <PlannerMap pois={currentDayPois} />
             </div>
 
-            <AIChatBar city="" days={days} selectedDay={selectedDay} dayPOIs={dayPOIs} />
+            <AIChatBar
+                city=""
+                days={dayPOIs.length}
+                selectedDay={selectedDay}
+                dayPOIs={dayPOIs}
+            />
         </main>
     );
 }

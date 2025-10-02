@@ -6,14 +6,15 @@ import { POI } from "./types";
 import { Autocomplete } from "@react-google-maps/api";
 
 interface Props {
-  day: number;
+  day: number;                  // Day index (1,2,3...) - still useful as unique ID
+  date: string;                 // ✅ actual calendar date (YYYY-MM-DD)
   initialPois: POI[];
-  city?: string; // ✅ make optional
+  city?: string;
   itineraryId?: string;
   isActive: boolean;
   onUpdatePois: (day: number, next: POI[]) => void;
   onSelectDay: (day: number) => void;
-  onCityChange: (day: number, city: string) => void; // ✅ per-day city
+  onCityChange: (day: number, city: string) => void;
   backendUrl: string;
 }
 
@@ -26,6 +27,7 @@ type SegInfo = {
 
 const EPS_KM = 0.03;
 
+// --- Haversine utilities ---
 function haversineKm(p1: POI, p2: POI): number {
   const R = 6371;
   const dLat = ((p2.lat - p1.lat) * Math.PI) / 180;
@@ -35,8 +37,7 @@ function haversineKm(p1: POI, p2: POI): number {
       Math.cos((p1.lat * Math.PI) / 180) *
       Math.cos((p2.lat * Math.PI) / 180) *
       Math.sin(dLng / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }
 
 function isSameSpot(a: POI, b: POI) {
@@ -56,83 +57,64 @@ function segKey(p1: POI, p2: POI) {
   return `${p1.lat},${p1.lng}|${p2.lat},${p2.lng}`;
 }
 
-async function fetchSegInfo(
-    p1: POI,
-    p2: POI,
-    backendUrl: string
-): Promise<SegInfo> {
+// --- Fetch segment info from backend or fallback ---
+async function fetchSegInfo(p1: POI, p2: POI, backendUrl: string): Promise<SegInfo> {
   if (isSameSpot(p1, p2)) {
     return { durationText: "0 min", distanceText: "0.0 km" };
   }
 
   if (MODE === "mock") {
-    const mins = haversineMinutes(p1, p2);
-    const km = haversineKm(p1, p2);
     return {
-      durationText: `${mins} min drive`,
-      distanceText: `${km.toFixed(1)} km`,
+      durationText: `${haversineMinutes(p1, p2)} min drive`,
+      distanceText: `${haversineKm(p1, p2).toFixed(1)} km`,
     };
   }
 
-  const body = {
-    origins: [{ lat: p1.lat, lng: p1.lng }],
-    destinations: [{ lat: p2.lat, lng: p2.lng }],
-    mode: "DRIVING",
-  };
-
   try {
-    const url =
-        MODE === "nextapi" ? "/api/distance" : `${backendUrl}/api/distance`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const res = await fetch(
+        MODE === "nextapi" ? "/api/distance" : `${backendUrl}/api/distance`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            origins: [{ lat: p1.lat, lng: p1.lng }],
+            destinations: [{ lat: p2.lat, lng: p2.lng }],
+            mode: "DRIVING",
+          }),
+        }
+    );
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const json = await res.json();
-
     const el = json?.rows?.[0]?.elements?.[0];
 
-    let durationText: string | null =
-        el?.duration?.text ?? el?.travelDurationText ?? null;
-    if (!durationText) {
-      const seconds = el?.duration?.value ?? el?.travelDuration?.value;
-      if (typeof seconds === "number") {
-        durationText = `${Math.max(0, Math.round(seconds / 60))} min drive`;
-      }
-    }
+    const durationText =
+        el?.duration?.text ??
+        el?.travelDurationText ??
+        (el?.duration?.value
+            ? `${Math.round(el.duration.value / 60)} min drive`
+            : null);
 
-    let distanceText: string | null = el?.distance?.text ?? null;
-    if (!distanceText) {
-      const meters = el?.distance?.value;
-      if (typeof meters === "number") {
-        distanceText = `${(meters / 1000).toFixed(1)} km`;
-      }
-    }
+    const distanceText =
+        el?.distance?.text ??
+        (el?.distance?.value ? `${(el.distance.value / 1000).toFixed(1)} km` : null);
 
-    if (!durationText || !distanceText) {
-      const mins = haversineMinutes(p1, p2);
-      const km = haversineKm(p1, p2);
-      return {
-        durationText: durationText ?? `${mins} min drive`,
-        distanceText: distanceText ?? `${km.toFixed(1)} km`,
-      };
-    }
-
-    return { durationText, distanceText };
-  } catch {
-    const mins = haversineMinutes(p1, p2);
-    const km = haversineKm(p1, p2);
     return {
-      durationText: `${mins} min drive`,
-      distanceText: `${km.toFixed(1)} km`,
+      durationText: durationText ?? `${haversineMinutes(p1, p2)} min drive`,
+      distanceText: distanceText ?? `${haversineKm(p1, p2).toFixed(1)} km`,
+    };
+  } catch {
+    return {
+      durationText: `${haversineMinutes(p1, p2)} min drive`,
+      distanceText: `${haversineKm(p1, p2).toFixed(1)} km`,
     };
   }
 }
 
+// --- Component ---
 export default function DayPOISection({
                                         day,
+                                        date,
                                         initialPois,
                                         city,
                                         itineraryId,
@@ -148,13 +130,13 @@ export default function DayPOISection({
   const [segInfoMap, setSegInfoMap] = useState<Record<string, SegInfo>>({});
   const [loadingKeys, setLoadingKeys] = useState<Record<string, boolean>>({});
 
+  // --- Segment calculations ---
   const segments = useMemo(() => {
     const arr: Array<{ from: POI; to: POI; k: string }> = [];
     for (let i = 0; i < pois.length - 1; i++) {
       const from = pois[i];
       const to = pois[i + 1];
-      if (isSameSpot(from, to)) continue;
-      arr.push({ from, to, k: segKey(from, to) });
+      if (!isSameSpot(from, to)) arr.push({ from, to, k: segKey(from, to) });
     }
     return arr;
   }, [pois]);
@@ -179,29 +161,37 @@ export default function DayPOISection({
     };
   }, [segments, backendUrl]);
 
+  // --- When a POI is picked ---
   const handlePick = (picked: { name: string; lat: number; lng: number }) => {
     const newPoi: POI = {
       name: picked.name,
       lat: picked.lat,
       lng: picked.lng,
       sequence: pois.length,
-      day: day,
+      day,
+      date, // ✅ carry actual date with each POI
     };
     onUpdatePois(day, [...pois, newPoi]);
   };
 
   return (
-      <div
-          className={`rounded border p-4 ${isActive ? "bg-blue-50" : "bg-white"}`}
-      >
+      <div className={`rounded border p-4 ${isActive ? "bg-blue-50" : "bg-white"}`}>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold">Day {day}</h3>
+          {/* ✅ Show actual calendar date */}
+          <h3 className="font-semibold">
+            {new Date(date).toLocaleDateString(undefined, {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })}
+          </h3>
           <button className="text-sm opacity-70" onClick={() => onSelectDay(day)}>
             {isActive ? "Active" : "Set Active"}
           </button>
         </div>
 
-        {/* ✅ Per-day city input with Google Autocomplete */}
+        {/* ✅ City Input with Google Autocomplete */}
         <div className="mb-3">
           <label className="block text-sm font-medium mb-1">Select City:</label>
           <Autocomplete
@@ -224,12 +214,10 @@ export default function DayPOISection({
           </Autocomplete>
         </div>
 
-        <SearchPOI
-            city={city ?? ""}
-            onPick={handlePick}
-            placeholder="Type e.g. 博物馆 / museum…"
-        />
+        {/* ✅ POI Search */}
+        <SearchPOI city={city ?? ""} onPick={handlePick} placeholder="Search POI…" />
 
+        {/* ✅ POI List with driving segments */}
         <ol className="mt-3 space-y-2 list-decimal pl-5">
           {pois.map((p, i) => {
             const hasNext = i < pois.length - 1;
