@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { POI } from "./types";
 
 interface SearchPOIProps {
@@ -12,46 +12,48 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
     const [query, setQuery] = useState("");
     const [results, setResults] = useState<google.maps.places.PlaceResult[]>([]);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const mapRef = useRef<HTMLDivElement | null>(null);
     const serviceRef = useRef<google.maps.places.PlacesService | null>(null);
 
-    // initialize PlacesService once
+    // Initialize PlacesService once Google Maps API is available
     useEffect(() => {
-        if (mapRef.current && !serviceRef.current) {
+        if (mapRef.current && !serviceRef.current && typeof window !== "undefined" && (window as any).google) {
             const dummyMap = new google.maps.Map(mapRef.current);
             serviceRef.current = new google.maps.places.PlacesService(dummyMap);
         }
     }, []);
 
     const handleSearch = () => {
-        if (!query || !serviceRef.current) return;
+        if (!query) return;
+        if (!serviceRef.current) {
+            setError("Google Maps Places API not loaded yet.");
+            return;
+        }
 
         setLoading(true);
+        setError(null);
         setResults([]);
 
-        serviceRef.current.textSearch(
-            {
-                query: city ? `${query} in ${city}` : query,
-            },
-            (places, status) => {
-                setLoading(false);
-                if (
-                    status === google.maps.places.PlacesServiceStatus.OK &&
-                    places &&
-                    places.length > 0
-                ) {
-                    setResults(places);
-                } else {
-                    setResults([]);
-                }
+        const text = city ? `${query} in ${city}` : query;
+
+        serviceRef.current.textSearch({ query: text }, (places, status) => {
+            setLoading(false);
+
+            if (status === google.maps.places.PlacesServiceStatus.OK && places && places.length > 0) {
+                setResults(places);
+            } else {
+                console.warn("Places search failed:", status);
+                setError("No results found.");
+                setResults([]);
             }
-        );
+        });
     };
 
     return (
         <div>
-            {/* Hidden div required by PlacesService */}
+            {/* Hidden div required for PlacesService */}
             <div ref={mapRef} style={{ display: "none" }} />
 
             <div className="flex gap-2">
@@ -63,35 +65,36 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                     className="border px-2 py-1 rounded w-full"
                 />
                 <button
+                    type="button"
                     onClick={handleSearch}
-                    className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+                    disabled={!query || loading}
+                    className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:opacity-50"
                 >
-                    Search
+                    {loading ? "Searching…" : "Search"}
                 </button>
             </div>
 
-            {loading && <p className="text-sm text-gray-500 mt-2">Searching…</p>}
+            {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
 
             <ul className="mt-2 space-y-2">
                 {results.map((p, i) => (
                     <li
                         key={i}
                         className="cursor-pointer p-2 border rounded hover:bg-gray-100"
-                        onClick={() =>
-                            p.geometry?.location &&
-                            onPick({
-                                name: p.name ?? "Unknown",
-                                lat: p.geometry.location.lat(),
-                                lng: p.geometry.location.lng(),
-                                sequence: 0,
-                                day: 0,
-                            })
-                        }
+                        onClick={() => {
+                            if (p.geometry?.location) {
+                                onPick({
+                                    name: p.name ?? "Unknown",
+                                    lat: p.geometry.location.lat(),
+                                    lng: p.geometry.location.lng(),
+                                    sequence: 0,
+                                    day: 0,
+                                });
+                            }
+                        }}
                     >
                         <div className="font-medium">{p.name}</div>
-                        <div className="text-sm text-gray-600">
-                            {p.formatted_address ?? ""}
-                        </div>
+                        <div className="text-sm text-gray-600">{p.formatted_address ?? ""}</div>
                     </li>
                 ))}
             </ul>
