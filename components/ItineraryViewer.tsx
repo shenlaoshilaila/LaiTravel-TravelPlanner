@@ -11,7 +11,7 @@ interface ItineraryViewerProps {
   onPoisChanged?: (all: POI[]) => void;
 }
 
-// 🔹 Define backend URL (adjust if needed)
+// 🔹 Define backend URL
 const BACKEND_URL = "https://travelplanner-720040112489.us-east1.run.app";
 
 export default function ItineraryViewer({
@@ -25,7 +25,15 @@ export default function ItineraryViewer({
       poisByDay[0]?.day ?? 1
   );
 
-  // Update local state when POIs change
+  // ✅ Track per-day city if needed
+  const [citiesByDay, setCitiesByDay] = React.useState<Record<number, string>>(
+      () =>
+          Object.fromEntries(
+              poisByDay.map((d) => [d.day, city]) // default city applied to all days
+          )
+  );
+
+  // Update local POIs when changed
   const handleUpdatePois = (day: number, nextForDay: POI[]) => {
     const next = unsavedPOIs.map((d) =>
         d.day === day ? { ...d, pois: nextForDay } : d
@@ -34,13 +42,18 @@ export default function ItineraryViewer({
     onPoisChanged?.(next.flatMap((d) => d.pois));
   };
 
+  // ✅ Handle city change per day
+  const handleCityChange = (day: number, newCity: string) => {
+    setCitiesByDay((prev) => ({ ...prev, [day]: newCity }));
+  };
+
   // Save all POIs to backend
   const handleSavePlan = async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/api/itinerary/${id}/save`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ days: unsavedPOIs }),
+        body: JSON.stringify({ days: unsavedPOIs, cities: citiesByDay }),
       });
       if (!res.ok) throw new Error("Save failed");
       alert("Saved successfully!");
@@ -55,12 +68,13 @@ export default function ItineraryViewer({
             <div key={day} className="space-y-2">
               <DayPOISection
                   day={day}
-                  city={city}
+                  city={citiesByDay[day] ?? city}
                   itineraryId={id}
                   initialPois={pois}
                   isActive={activeDay === day}
                   onSelectDay={setActiveDay}
                   onUpdatePois={handleUpdatePois}
+                  onCityChange={handleCityChange} // ✅ FIXED
                   backendUrl={BACKEND_URL}
               />
 
