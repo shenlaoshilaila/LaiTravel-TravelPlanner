@@ -19,7 +19,8 @@ function toFlatPois(poisGroupedOrFlat: DayPOI[] | POI[]): POI[] {
                 out.push({
                     ...p,
                     day: d.day,
-                    city: d.city ?? "", // ✅ ensure city is carried
+                    date: (d as any).date ?? undefined, // ✅ optional date support
+                    city: d.city ?? "",
                 });
             }
         }
@@ -29,7 +30,11 @@ function toFlatPois(poisGroupedOrFlat: DayPOI[] | POI[]): POI[] {
     // ---- Already flat POI[] ----
     const flat = poisGroupedOrFlat as POI[];
     return flat
-        .map((p) => ({ ...p, city: p.city ?? "" })) // ✅ ensure city exists
+        .map((p) => ({
+            ...p,
+            city: p.city ?? "",
+            date: (p as any).date ?? undefined,
+        }))
         .slice()
         .sort((a, b) => a.day - b.day || a.sequence - b.sequence);
 }
@@ -59,11 +64,17 @@ export default function SavePlanButton({
         setMessage("");
 
         try {
-            // 1️⃣ Build payload for backend
-            const backendFormat = {
-                days: planData.days,
+            // 1️⃣ Build backend payload safely
+            const backendFormat: any = {
                 pois: toFlatPois(planData.pois),
             };
+
+            // Support both `days` and `date range` itineraries
+            if ((planData as any).days) backendFormat.days = (planData as any).days;
+            if ((planData as any).startDate)
+                backendFormat.startDate = (planData as any).startDate;
+            if ((planData as any).endDate)
+                backendFormat.endDate = (planData as any).endDate;
 
             console.log("📤 Sending payload:", backendFormat);
 

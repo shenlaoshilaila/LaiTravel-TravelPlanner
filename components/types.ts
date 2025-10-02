@@ -7,31 +7,30 @@ export interface POI {
     sequence: number;
     day: number;
     city?: string;
-    date?: string; // ✅ NEW
+    date?: string; // ✅ optional support for date-based itineraries
 }
 
 export interface DayPOI {
     day: number;
-    date: string; // ✅ NEW - actual calendar date
+    date?: string; // ✅ optional per-day date (yyyy-mm-dd)
     city?: string;
     pois: POI[];
 }
 
-// When saving a plan
+// When saving, plan can be based on "days" OR a date range
 export interface PlanData {
-    // Before: days: number;
-    startDate?: string; // ✅ NEW
-    endDate?: string;   // ✅ NEW
-    pois: POI[];
+    days?: number; // ✅ optional (for simple day count itineraries)
+    startDate?: string; // ✅ optional (yyyy-mm-dd)
+    endDate?: string;   // ✅ optional (yyyy-mm-dd)
+    pois: DayPOI[] | POI[];
 }
 
-// For backend response
 export interface PlanSavedResponse {
     id: string;
-    plan?: any;
+    plan?: any; // backend shape fallback
 }
 
 export interface SavePlanButtonProps {
     planData: PlanData;
-    onPlanSaved?: (res: PlanSavedResponse) => void;
+    onPlanSaved?: (saved: PlanSavedResponse) => void;
 }
