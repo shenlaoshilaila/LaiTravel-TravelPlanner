@@ -4,7 +4,7 @@ import { POI } from "./types";
 
 interface DayPOISectionProps {
     day: number;
-    date: string;
+    date?: string;   // ✅ optional now
     city: string;
     initialPois: POI[];
     onUpdatePois: (day: number, pois: POI[]) => void;
@@ -95,7 +95,8 @@ export default function DayPOISection({
             }`}
         >
             <h3 className="font-semibold">
-                {new Date(date).toDateString()} — Day {day}{" "}
+                {/* ✅ Fallback if date is missing */}
+                {date ? new Date(date).toDateString() : "No date"} — Day {day}{" "}
                 {isActive && <span className="text-green-600">Active</span>}
             </h3>
             <p className="text-sm mb-2">City: {city || "Not selected"}</p>
