@@ -20,10 +20,10 @@ export default function PlannerForm({
     const handlePlaceChanged = () => {
         if (autocompleteRef.current) {
             const place = autocompleteRef.current.getPlace();
-            if (place.formatted_address) {
-                onCityChange(place.formatted_address);
-            } else if (place.name) {
-                onCityChange(place.name);
+
+            // ✅ Use only the city "name" (short clean string) instead of full formatted_address
+            if (place.name) {
+                onCityChange(place.name); // e.g. "New York"
             }
         }
     };
