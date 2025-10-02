@@ -17,7 +17,7 @@ const LIBRARIES: Library[] = ["places"];
 
 type Props = {
     pois: POI[];
-    center?: { lat: number; lng: number }; // ✅ new prop to override map center
+    center?: { lat: number; lng: number }; // ✅ optional map center override
     mode?: "DRIVING" | "WALKING" | "BICYCLING" | "TRANSIT";
     optimizeWaypoints?: boolean;
 };
@@ -39,13 +39,18 @@ export default function PlannerMap({
     const [directions, setDirections] =
         useState<google.maps.DirectionsResult | null>(null);
 
-    // Fallback center: city center → first POI → Beijing
+    // ✅ Decide map center
     const mapCenter =
         center ??
-        (pois.length ? { lat: pois[0].lat, lng: pois[0].lng } : DEFAULT_CENTER);
+        (pois.length > 0
+            ? { lat: pois[0].lat, lng: pois[0].lng }
+            : DEFAULT_CENTER);
 
+    // 🔄 Recompute directions when POIs change
     useEffect(() => {
         if (!isLoaded) return;
+
+        // If <2 POIs → just show markers, no directions
         if (pois.length < 2) {
             setDirections(null);
             return;
@@ -94,11 +99,13 @@ export default function PlannerMap({
 
                 setDirections(result);
 
+                // ✅ Auto-fit to route bounds
                 const route0 = result.routes?.[0];
                 if (mapRef.current && route0?.bounds) {
                     mapRef.current.fitBounds(route0.bounds);
                 }
-            } catch {
+            } catch (err) {
+                console.error("Directions API failed:", err);
                 if (!cancelled) setDirections(null);
             }
         })();
@@ -117,9 +124,10 @@ export default function PlannerMap({
                 mapRef.current = m;
             }}
             mapContainerStyle={containerStyle}
-            center={mapCenter} // ✅ dynamic center
+            center={mapCenter} // ✅ dynamic city center
             zoom={12}
         >
+            {/* 🔵 Place markers */}
             {pois.map((p, idx) => (
                 <Marker
                     key={`${p.lat},${p.lng},${idx}`}
@@ -129,13 +137,14 @@ export default function PlannerMap({
                 />
             ))}
 
+            {/* 🛣️ Show route */}
             {directions && (
                 <DirectionsRenderer
                     directions={directions}
                     options={{
-                        suppressMarkers: true,
+                        suppressMarkers: true, // we already add markers
                         preserveViewport: true,
-                        polylineOptions: { strokeWeight: 5 },
+                        polylineOptions: { strokeWeight: 5, strokeOpacity: 0.8 },
                     }}
                 />
             )}

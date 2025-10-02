@@ -1,4 +1,3 @@
-// components/DayPOISection.tsx
 "use client";
 
 import React, { useMemo, useState, useEffect } from "react";
@@ -8,27 +7,26 @@ import { POI } from "./types";
 interface Props {
   day: number;
   initialPois: POI[];
-  city: string;
+  city?: string; // ✅ make optional (can be empty at start)
   itineraryId?: string;
   isActive: boolean;
   onUpdatePois: (day: number, next: POI[]) => void;
   onSelectDay: (day: number) => void;
-  backendUrl: string;   // ✅ added backendUrl prop
+  onCityChange: (day: number, city: string) => void; // ✅ per-day city
+  backendUrl: string;
 }
 
-// Switch how we fetch durations/distances
-const MODE = process.env.NEXT_PUBLIC_DISTANCE_MODE ?? "mock"; // "mock" | "nextapi" | "spring"
+const MODE = process.env.NEXT_PUBLIC_DISTANCE_MODE ?? "mock";
 
 type SegInfo = {
-  durationText: string; // e.g. "28 mins"
-  distanceText: string; // e.g. "12.4 km"
+  durationText: string;
+  distanceText: string;
 };
 
-// ---------- Helpers ----------
-const EPS_KM = 0.03; // treat < 30 meters as the same spot
+const EPS_KM = 0.03;
 
 function haversineKm(p1: POI, p2: POI): number {
-  const R = 6371; // km
+  const R = 6371;
   const dLat = ((p2.lat - p1.lat) * Math.PI) / 180;
   const dLng = ((p2.lng - p1.lng) * Math.PI) / 180;
   const a =
@@ -48,8 +46,8 @@ function haversineMinutes(p1: POI, p2: POI): number {
   const distanceKm = haversineKm(p1, p2);
   const avgKmh = 40;
   const mins = (distanceKm / avgKmh) * 60;
-  if (distanceKm < 0.03) return 0; // < 30 m
-  if (distanceKm < 0.15) return 1; // < 150 m
+  if (distanceKm < 0.03) return 0;
+  if (distanceKm < 0.15) return 1;
   return Math.max(1, Math.round(mins));
 }
 
@@ -57,7 +55,11 @@ function segKey(p1: POI, p2: POI) {
   return `${p1.lat},${p1.lng}|${p2.lat},${p2.lng}`;
 }
 
-async function fetchSegInfo(p1: POI, p2: POI, backendUrl: string): Promise<SegInfo> {
+async function fetchSegInfo(
+    p1: POI,
+    p2: POI,
+    backendUrl: string
+): Promise<SegInfo> {
   if (isSameSpot(p1, p2)) {
     return { durationText: "0 min", distanceText: "0.0 km" };
   }
@@ -75,10 +77,7 @@ async function fetchSegInfo(p1: POI, p2: POI, backendUrl: string): Promise<SegIn
   };
 
   try {
-    const url =
-        MODE === "nextapi"
-            ? "/api/distance"
-            : `${backendUrl}/api/distance`; // ✅ dynamic backendUrl
+    const url = MODE === "nextapi" ? "/api/distance" : `${backendUrl}/api/distance`;
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -131,8 +130,9 @@ export default function DayPOISection({
                                         itineraryId,
                                         onUpdatePois,
                                         onSelectDay,
+                                        onCityChange,
                                         isActive = false,
-                                        backendUrl, // ✅ receive it
+                                        backendUrl,
                                       }: Props) {
   const pois = initialPois;
 
@@ -152,12 +152,11 @@ export default function DayPOISection({
 
   useEffect(() => {
     let cancelled = false;
-
     (async () => {
       for (const s of segments) {
         if (segInfoMap[s.k]) continue;
         setLoadingKeys((m) => ({ ...m, [s.k]: true }));
-        const info = await fetchSegInfo(s.from, s.to, backendUrl); // ✅ pass backendUrl
+        const info = await fetchSegInfo(s.from, s.to, backendUrl);
         if (cancelled) return;
         setSegInfoMap((m) => ({ ...m, [s.k]: info }));
         setLoadingKeys((m) => {
@@ -166,7 +165,6 @@ export default function DayPOISection({
         });
       }
     })();
-
     return () => {
       cancelled = true;
     };
@@ -192,7 +190,19 @@ export default function DayPOISection({
           </button>
         </div>
 
-        <SearchPOI city={city} onPick={handlePick} placeholder="Type e.g. 博物馆 / museum…" />
+        {/* ✅ Per-day city input */}
+        <div className="mb-3">
+          <label className="block text-sm font-medium mb-1">Select City:</label>
+          <input
+              type="text"
+              value={city ?? ""} // ✅ safe fallback
+              onChange={(e) => onCityChange(day, e.target.value)}
+              placeholder="e.g. Shanghai, China"
+              className="border px-2 py-1 rounded w-full"
+          />
+        </div>
+
+        <SearchPOI city={city ?? ""} onPick={handlePick} placeholder="Type e.g. 博物馆 / museum…" />
 
         <ol className="mt-3 space-y-2 list-decimal pl-5">
           {pois.map((p, i) => {

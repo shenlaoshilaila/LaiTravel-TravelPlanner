@@ -1,35 +1,40 @@
-// components/SavePlanButton.tsx
 "use client";
 
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { PlanSavedResponse, SavePlanButtonProps, POI, DayPOI } from "./types";
 
-// Convert either DayPOI[] or POI[] into a flat POI[]
+// ✅ Convert either DayPOI[] or POI[] into flat POI[]
 function toFlatPois(poisGroupedOrFlat: DayPOI[] | POI[]): POI[] {
     if (!poisGroupedOrFlat || (poisGroupedOrFlat as any[]).length === 0) return [];
     const first: any = (poisGroupedOrFlat as any[])[0];
 
     if (first && typeof first === "object" && "pois" in first) {
-        // DayPOI[]
+        // ---- DayPOI[] case ----
         const byDay = poisGroupedOrFlat as DayPOI[];
         const out: POI[] = [];
         for (const d of byDay) {
             for (const p of d.pois) {
-                out.push({ ...p, day: d.day });
+                out.push({
+                    ...p,
+                    day: d.day,
+                    city: d.city, // ✅ carry per-day city
+                });
             }
         }
         return out.sort((a, b) => a.day - b.day || a.sequence - b.sequence);
     }
 
-    // Already flat POI[]
+    // ---- Already flat POI[] ----
     const flat = poisGroupedOrFlat as POI[];
-    return flat.slice().sort((a, b) => a.day - b.day || a.sequence - b.sequence);
+    return flat
+        .slice()
+        .sort((a, b) => a.day - b.day || a.sequence - b.sequence);
 }
 
 // ---- Props ----
 interface SavePlanButtonFixedProps extends SavePlanButtonProps {
-    backendUrl: string; // ✅ add backendUrl here
+    backendUrl: string;
 }
 
 const CREATE_PATH = "/api/itinerary";
@@ -37,12 +42,11 @@ const CREATE_PATH = "/api/itinerary";
 export default function SavePlanButton({
                                            planData,
                                            onPlanSaved,
-                                           backendUrl, // ✅ use dynamic backend
+                                           backendUrl,
                                        }: SavePlanButtonFixedProps) {
     const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState("");
 
-    // Adjust to your AuthContext shape
     const auth = useAuth() as unknown as {
         jwt?: string | null;
         accessToken?: string | null;
@@ -53,21 +57,20 @@ export default function SavePlanButton({
         setMessage("");
 
         try {
-            // 1) Build payload
+            // 1️⃣ Build backend payload
             const backendFormat = {
-                city: planData.city,
                 days: planData.days,
                 pois: toFlatPois(planData.pois),
             };
 
-            // 2) Headers
+            // 2️⃣ Headers
             const bearer = auth?.jwt ?? auth?.accessToken ?? null;
             const headers: Record<string, string> = {
                 "Content-Type": "application/json",
             };
             if (bearer) headers.Authorization = `Bearer ${bearer}`;
 
-            // 3) POST
+            // 3️⃣ POST request
             const res = await fetch(`${backendUrl}${CREATE_PATH}`, {
                 method: "POST",
                 headers,
@@ -84,7 +87,7 @@ export default function SavePlanButton({
                 throw new Error(`Save failed: ${res.status} ${t}`);
             }
 
-            // 4) Parse response body safely
+            // 4️⃣ Parse response
             let saved: PlanSavedResponse | undefined;
             let savedId: string | undefined;
 
@@ -94,11 +97,11 @@ export default function SavePlanButton({
                     saved = JSON.parse(text) as PlanSavedResponse;
                     savedId = (saved as any)?.id ?? (saved as any)?.plan?.id;
                 } catch {
-                    // ignore parse errors if body is empty or not JSON
+                    // ignore parse errors if not JSON
                 }
             }
 
-            // 5) Fallback to Location header
+            // 5️⃣ Fallback to Location header
             if (!savedId) {
                 const loc = res.headers.get("Location") || res.headers.get("location");
                 if (loc) {
@@ -107,7 +110,7 @@ export default function SavePlanButton({
                 }
             }
 
-            // 6) Trigger callback defensively
+            // 6️⃣ Trigger callback
             onPlanSaved?.(saved ?? ({ id: savedId } as any));
             setMessage("Plan saved successfully!");
         } catch (e: any) {

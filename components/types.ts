@@ -1,56 +1,57 @@
 // components/types.ts
 
+// ---------- POI (Place of Interest) ----------
 export interface POI {
     name: string;
     lat: number;
     lng: number;
-    sequence: number;
-    day: number;
+    sequence: number;   // order within the day
+    day: number;        // which day this POI belongs to
+    city?: string;      // ✅ optional city for this POI
 }
 
 export interface POIWithSequence extends POI {
     sequence: number;
 }
 
+// ---------- Day-level ----------
 export interface DayPOI {
     day: number;
+    city?: string;   // ✅ each day can have its own city
     pois: POI[];
 }
 
+// ---------- Plan Data ----------
 export interface PlanData {
-    city: string;
     days: number;
-    // You pass POI[] from page.tsx (allPois)
-    pois: POI[];
+    city?: string;     // ✅ optional global city (legacy support)
+    pois: DayPOI[] | POI[];  // ✅ can be grouped by day or flat POIs
 }
 
-// ID can be UUID string or numeric depending on backend
+// ---------- Saved Plan ----------
 export interface SavedPlan {
     id: string | number;
-    city: string;
     days: number;
-    // Keep if you use it elsewhere; backend may not return this
-    itinerary?: DayPOI[];
+    city?: string;       // ✅ backend may still return global city
+    itinerary?: DayPOI[]; // ✅ richer shape if backend provides
     created_at?: string;
 }
 
-// More flexible response from backend
+// ---------- Backend Response ----------
 export interface PlanSavedResponse {
     success?: boolean;
     plan?: SavedPlan;
     message?: string;
-    // Some backends return the id at top-level
-    id?: string | number;
+    id?: string | number;  // some backends return id at top-level
 }
 
-// Minimal shape we can synthesize client-side (e.g., from Location header)
+// Minimal fallback if backend only returns ID
 export type MinimalSaved =
     | { id?: string | number }
     | { plan?: { id?: string | number } };
 
-// Props for Save button
+// ---------- Save Button Props ----------
 export interface SavePlanButtonProps {
     planData: PlanData;
-    // Allow both the rich response and our minimal fallback
     onPlanSaved?: (saved: PlanSavedResponse | MinimalSaved) => void;
 }
