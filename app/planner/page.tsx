@@ -1,9 +1,9 @@
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
-import DayPOISection from "@/components/DayPOISection";
+import DayPOISection from "@/components/DayPOISection";   // ✅ FIXED
 import PlannerMap from "@/components/PlannerMap";
 import SavePlanButton from "@/components/SavePlanButton";
-import { POI, DayPOI } from "@/components/types";
+import { POI, DayPOI } from "@/components/types";          // ✅ FIXED
 import { useRouter } from "next/navigation";
 import AIChatBar from "@/components/AIChatBar";
 
@@ -52,7 +52,7 @@ export default function PlannerPage() {
                 date: d.toISOString().split("T")[0],
                 city: "",
                 pois: [],
-            } as any);
+            });
             dayCount++;
         }
         setDayPOIs(newDays);
@@ -161,7 +161,8 @@ export default function PlannerPage() {
                             <SavePlanButton
                                 planData={{ startDate, endDate, pois: allPois }}
                                 onPlanSaved={(saved) => {
-                                    const id = (saved as any)?.plan?.id ?? (saved as any)?.id;
+                                    const id =
+                                        (saved as any)?.plan?.id ?? (saved as any)?.id;
                                     if (id) router.push(`/planner/${id}`);
                                 }}
                                 backendUrl={BACKEND_URL}
@@ -193,8 +194,10 @@ export default function PlannerPage() {
                 />
 
                 {/* RIGHT: Map fills full height */}
-                <div className="flex-1 flex">
-                    <PlannerMap pois={currentDayPois} className="flex-1 h-full w-full" />
+                <div className="flex-1 relative">
+                    <div className="absolute inset-0 h-full w-full">
+                        <PlannerMap pois={currentDayPois} />
+                    </div>
                 </div>
             </div>
 
