@@ -193,10 +193,8 @@ export default function PlannerPage() {
                 />
 
                 {/* RIGHT: Map fills full height */}
-                <div className="flex-1 relative">
-                    <div className="absolute inset-0 h-full w-full">
-                        <PlannerMap pois={currentDayPois} />
-                    </div>
+                <div className="flex-1 flex">
+                    <PlannerMap pois={currentDayPois} className="flex-1 h-full w-full" />
                 </div>
             </div>
 

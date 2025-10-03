@@ -4,8 +4,8 @@ import { POI } from "./types";
 
 interface DayPOISectionProps {
     day: number;
-    date?: string;   // ✅ optional now
-    city: string;
+    date?: string; // ✅ optional date
+    city?: string; // ✅ optional city
     initialPois: POI[];
     onUpdatePois: (day: number, pois: POI[]) => void;
     onSelectDay: (day: number) => void;
@@ -38,13 +38,14 @@ export default function DayPOISection({
 
         const service = new google.maps.DistanceMatrixService();
 
-        const newDistances: DistanceInfo[] = [];
+        // Reset distances
+        setDistances([]);
 
         initialPois.forEach((origin, i) => {
             if (i === initialPois.length - 1) return;
             const destination = initialPois[i + 1];
 
-            // 🚗 Driving
+            // 🚗 Driving request
             service.getDistanceMatrix(
                 {
                     origins: [{ lat: origin.lat, lng: origin.lng }],
@@ -54,18 +55,20 @@ export default function DayPOISection({
                 (res, status) => {
                     if (status === "OK" && res?.rows[0]?.elements[0]) {
                         const drive = res.rows[0].elements[0];
-                        newDistances.push({
-                            from: origin.name,
-                            to: destination.name,
-                            driving: `${drive.distance?.text} (${drive.duration?.text})`,
-                            walking: "Loading...",
-                        });
-                        setDistances([...newDistances]);
+                        setDistances((prev) => [
+                            ...prev,
+                            {
+                                from: origin.name,
+                                to: destination.name,
+                                driving: `${drive.distance?.text ?? "?"} (${drive.duration?.text ?? "?"})`,
+                                walking: "Loading...",
+                            },
+                        ]);
                     }
                 }
             );
 
-            // 🚶 Walking
+            // 🚶 Walking request
             service.getDistanceMatrix(
                 {
                     origins: [{ lat: origin.lat, lng: origin.lng }],
@@ -75,13 +78,16 @@ export default function DayPOISection({
                 (res, status) => {
                     if (status === "OK" && res?.rows[0]?.elements[0]) {
                         const walk = res.rows[0].elements[0];
-                        const idx = newDistances.findIndex(
-                            (d) => d.from === origin.name && d.to === destination.name
+                        setDistances((prev) =>
+                            prev.map((d) =>
+                                d.from === origin.name && d.to === destination.name
+                                    ? {
+                                        ...d,
+                                        walking: `${walk.distance?.text ?? "?"} (${walk.duration?.text ?? "?"})`,
+                                    }
+                                    : d
+                            )
                         );
-                        if (idx !== -1) {
-                            newDistances[idx].walking = `${walk.distance?.text} (${walk.duration?.text})`;
-                            setDistances([...newDistances]);
-                        }
                     }
                 }
             );
@@ -99,7 +105,7 @@ export default function DayPOISection({
                 {date ? new Date(date).toDateString() : "No date"} — Day {day}{" "}
                 {isActive && <span className="text-green-600">Active</span>}
             </h3>
-            <p className="text-sm mb-2">City: {city || "Not selected"}</p>
+            <p className="text-sm mb-2">City: {city ?? "Not selected"}</p>
 
             <ul className="space-y-1">
                 {initialPois.map((poi, i) => (
@@ -122,3 +128,4 @@ export default function DayPOISection({
         </div>
     );
 }
+

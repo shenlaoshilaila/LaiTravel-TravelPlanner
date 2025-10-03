@@ -3,14 +3,17 @@ import { POI } from "./types";
 
 interface PlannerMapProps {
     pois: POI[];
+    className?: string;  // ✅ allow passing custom className
 }
 
-export default function PlannerMap({ pois }: PlannerMapProps) {
+export default function PlannerMap({ pois, className }: PlannerMapProps) {
     const mapRef = useRef<HTMLDivElement | null>(null);
     const mapInstance = useRef<google.maps.Map | null>(null);
     const directionsService = useRef<google.maps.DirectionsService | null>(null);
     const directionsRenderer = useRef<google.maps.DirectionsRenderer | null>(null);
+    const markersRef = useRef<google.maps.Marker[]>([]);
 
+    // Initialize map once
     useEffect(() => {
         if (mapRef.current && !mapInstance.current && (window as any).google) {
             mapInstance.current = new google.maps.Map(mapRef.current, {
@@ -19,20 +22,42 @@ export default function PlannerMap({ pois }: PlannerMapProps) {
             });
             directionsService.current = new google.maps.DirectionsService();
             directionsRenderer.current = new google.maps.DirectionsRenderer({
-                suppressMarkers: false,
+                suppressMarkers: true, // ✅ so we can control markers
             });
             directionsRenderer.current.setMap(mapInstance.current);
         }
     }, []);
 
+    // Update map when POIs change
     useEffect(() => {
         if (!mapInstance.current || !directionsService.current || !directionsRenderer.current) return;
 
-        if (pois.length < 2) {
-            directionsRenderer.current.setDirections({ routes: [] } as any); // clear
+        // Clear old markers
+        markersRef.current.forEach((m) => m.setMap(null));
+        markersRef.current = [];
+
+        if (pois.length === 0) {
+            directionsRenderer.current.setDirections({ routes: [] } as any); // clear route
             return;
         }
 
+        // Add markers
+        pois.forEach((p, i) => {
+            const marker = new google.maps.Marker({
+                position: { lat: p.lat, lng: p.lng },
+                map: mapInstance.current!,
+                label: `${i + 1}`, // number markers
+                title: p.name,
+            });
+            markersRef.current.push(marker);
+        });
+
+        if (pois.length < 2) {
+            directionsRenderer.current.setDirections({ routes: [] } as any); // no route
+            return;
+        }
+
+        // Build route
         const waypoints = pois.slice(1, -1).map((p) => ({
             location: { lat: p.lat, lng: p.lng },
             stopover: true,
@@ -48,6 +73,9 @@ export default function PlannerMap({ pois }: PlannerMapProps) {
             (result, status) => {
                 if (status === google.maps.DirectionsStatus.OK && result) {
                     directionsRenderer.current?.setDirections(result);
+
+                    // ✅ Auto fit map to route bounds
+                    mapInstance.current?.fitBounds(result.routes[0].bounds);
                 } else {
                     console.error("Directions failed:", status);
                 }
@@ -55,5 +83,5 @@ export default function PlannerMap({ pois }: PlannerMapProps) {
         );
     }, [pois]);
 
-    return <div ref={mapRef} className="w-full h-full" />;
+    return <div ref={mapRef} className={className ?? "w-full h-full"} />;
 }
