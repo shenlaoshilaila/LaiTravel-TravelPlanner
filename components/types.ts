@@ -12,8 +12,8 @@ export interface POI {
 
 export interface DayPOI {
     day: number;
-    date: string; // ✅ optional per-day date (yyyy-mm-dd)
-    city: string;
+    date?: string; // ✅ optional per-day date (yyyy-mm-dd)
+    city?: string;
     pois: POI[];
 }
 
