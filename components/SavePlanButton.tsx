@@ -1,152 +1,63 @@
 "use client";
+import React, { useState } from "react";
 
-import { useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { PlanSavedResponse, SavePlanButtonProps, POI, DayPOI } from "./types";
-
-// ✅ Convert DayPOI[] or POI[] into flat POI[]
-function toFlatPois(poisGroupedOrFlat: DayPOI[] | POI[]): POI[] {
-    if (!poisGroupedOrFlat || (poisGroupedOrFlat as any[]).length === 0) return [];
-
-    const first: any = (poisGroupedOrFlat as any[])[0];
-
-    if (first && typeof first === "object" && "pois" in first) {
-        // ---- DayPOI[] case ----
-        const byDay = poisGroupedOrFlat as DayPOI[];
-        const out: POI[] = [];
-        for (const d of byDay) {
-            for (const p of d.pois) {
-                out.push({
-                    ...p,
-                    day: d.day,
-                    date: (d as any).date ?? undefined, // ✅ optional date support
-                    city: d.city ?? "",
-                });
-            }
-        }
-        return out.sort((a, b) => a.day - b.day || a.sequence - b.sequence);
-    }
-
-    // ---- Already flat POI[] ----
-    const flat = poisGroupedOrFlat as POI[];
-    return flat
-        .map((p) => ({
-            ...p,
-            city: p.city ?? "",
-            date: (p as any).date ?? undefined,
-        }))
-        .slice()
-        .sort((a, b) => a.day - b.day || a.sequence - b.sequence);
-}
-
-// ---- Props ----
-interface SavePlanButtonFixedProps extends SavePlanButtonProps {
+export interface SavePlanButtonProps {
+    planData: {
+        startDate: string;
+        endDate: string;
+        pois: {
+            city?: string;
+            day: number;
+            date?: string;
+            name: string;
+            lat: number;
+            lng: number;
+            sequence: number;
+        }[];
+    };
+    onPlanSaved: (saved: { plan?: { id?: string }; id?: string }) => void;
     backendUrl: string;
 }
-
-const CREATE_PATH = "/api/itinerary";
 
 export default function SavePlanButton({
                                            planData,
                                            onPlanSaved,
                                            backendUrl,
-                                       }: SavePlanButtonFixedProps) {
-    const [isSaving, setIsSaving] = useState(false);
-    const [message, setMessage] = useState("");
+                                       }: SavePlanButtonProps) {
+    const [loading, setLoading] = useState(false);
 
-    const auth = useAuth() as unknown as {
-        jwt?: string | null;
-        accessToken?: string | null;
-    };
-
-    const handleSavePlan = async () => {
-        setIsSaving(true);
-        setMessage("");
-
+    const handleSave = async () => {
         try {
-            // 1️⃣ Build backend payload safely
-            const backendFormat: any = {
-                pois: toFlatPois(planData.pois),
-            };
-
-            // Support both `days` and `date range` itineraries
-            if ((planData as any).days) backendFormat.days = (planData as any).days;
-            if ((planData as any).startDate)
-                backendFormat.startDate = (planData as any).startDate;
-            if ((planData as any).endDate)
-                backendFormat.endDate = (planData as any).endDate;
-
-            console.log("📤 Sending payload:", backendFormat);
-
-            // 2️⃣ Headers
-            const bearer = auth?.jwt ?? auth?.accessToken ?? null;
-            const headers: Record<string, string> = {
-                "Content-Type": "application/json",
-            };
-            if (bearer) headers.Authorization = `Bearer ${bearer}`;
-
-            // 3️⃣ POST request
-            const res = await fetch(`${backendUrl}${CREATE_PATH}`, {
+            setLoading(true);
+            const res = await fetch(`${backendUrl}/itinerary`, {
                 method: "POST",
-                headers,
-                credentials: "include", // keep if JWT cookie/session is used
-                body: JSON.stringify(backendFormat),
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(planData),
+                credentials: "include",
             });
 
-            if (res.status === 401) {
-                setMessage("⚠️ Please login to save plans");
-                return;
+            if (res.ok) {
+                const data = await res.json();
+                onPlanSaved(data);
+            } else {
+                console.error("Failed to save plan", res.statusText);
             }
-            if (!res.ok) {
-                const t = await res.text();
-                throw new Error(`Save failed: ${res.status} ${t}`);
-            }
-
-            // 4️⃣ Parse response safely
-            let saved: PlanSavedResponse | undefined;
-            let savedId: string | undefined;
-
-            const text = await res.text();
-            if (text) {
-                try {
-                    saved = JSON.parse(text) as PlanSavedResponse;
-                    savedId = (saved as any)?.id ?? (saved as any)?.plan?.id;
-                } catch {
-                    console.warn("⚠️ Response not JSON, raw text:", text);
-                }
-            }
-
-            // 5️⃣ Fallback to Location header
-            if (!savedId) {
-                const loc = res.headers.get("Location") || res.headers.get("location");
-                if (loc) {
-                    const parts = loc.split("/").filter(Boolean);
-                    savedId = parts[parts.length - 1];
-                }
-            }
-
-            // 6️⃣ Trigger callback
-            onPlanSaved?.(saved ?? ({ id: savedId } as any));
-            setMessage("✅ Plan saved successfully!");
-        } catch (e: any) {
-            console.error("❌ Save error:", e);
-            setMessage(e?.message ?? "Error saving plan");
+        } catch (e) {
+            console.error("Error saving plan", e);
         } finally {
-            setIsSaving(false);
+            setLoading(false);
         }
     };
 
     return (
-        <div>
-            <button
-                type="button"
-                onClick={handleSavePlan}
-                disabled={isSaving}
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-            >
-                {isSaving ? "Saving..." : "Save Plan"}
-            </button>
-            {message && <p className="mt-2 text-sm">{message}</p>}
-        </div>
+        <button
+            onClick={handleSave}
+            disabled={loading}
+            className={`px-4 py-2 rounded text-white ${
+                loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+            }`}
+        >
+            {loading ? "Saving..." : "Save Plan"}
+        </button>
     );
 }

@@ -21,10 +21,6 @@ export default function PlannerPage() {
     const [selectedDay, setSelectedDay] = useState<number | null>(1);
     const [user, setUser] = useState<User>(null);
 
-    const [detectedDates, setDetectedDates] = useState<
-        { start: string; end: string }[]
-    >([]);
-
     // 🔐 Fetch current user
     useEffect(() => {
         (async () => {
@@ -116,7 +112,6 @@ export default function PlannerPage() {
             {/* Flight Date Extractor */}
             <div className="p-4 border-b">
                 <FlightDateExtractor
-                    detectedDates={detectedDates ?? []} // ✅ ensure it's an array
                     onSelect={(start, end) => {
                         setStartDate(start);
                         setEndDate(end);
@@ -124,7 +119,6 @@ export default function PlannerPage() {
                     onReset={() => {
                         setStartDate("");
                         setEndDate("");
-                        setDetectedDates([]);
                     }}
                 />
             </div>
@@ -166,8 +160,8 @@ export default function PlannerPage() {
                             <DayPOISection
                                 key={day}
                                 day={day}
-                                date={date ?? ""} // ✅ always string
-                                city={city ?? ""} // ✅ always string
+                                date={date ?? ""}
+                                city={city ?? ""}
                                 initialPois={pois}
                                 onUpdatePois={updatePOIsForDay}
                                 onSelectDay={setSelectedDay}
