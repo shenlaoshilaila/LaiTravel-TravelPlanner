@@ -21,6 +21,30 @@ export default function PlannerPage() {
     const [selectedDay, setSelectedDay] = useState<number | null>(1);
     const [user, setUser] = useState<User>(null);
 
+    const [detectedDates, setDetectedDates] = useState<
+        { start: string; end: string }[]
+    >([]);
+
+    // --- Resizable Split Pane state ---
+    const [leftWidth, setLeftWidth] = useState(50); // % width for left panel
+    const handleDrag = (e: MouseEvent) => {
+        const newWidth = (e.clientX / window.innerWidth) * 100;
+        if (newWidth > 20 && newWidth < 80) {
+            setLeftWidth(newWidth);
+        }
+    };
+
+    const startDrag = (e: React.MouseEvent) => {
+        e.preventDefault();
+        window.addEventListener("mousemove", handleDrag);
+        window.addEventListener("mouseup", stopDrag);
+    };
+
+    const stopDrag = () => {
+        window.removeEventListener("mousemove", handleDrag);
+        window.removeEventListener("mouseup", stopDrag);
+    };
+
     // 🔐 Fetch current user
     useEffect(() => {
         (async () => {
@@ -95,15 +119,8 @@ export default function PlannerPage() {
     const currentDayPois =
         selectedDay ? dayPOIs.find((d) => d.day === selectedDay)?.pois ?? [] : [];
 
-    // --- Resizable Split Pane state ---
-    const [leftWidth, setLeftWidth] = useState(40); // percentage
-    const handleDrag = (e: React.MouseEvent) => {
-        const newWidth = (e.clientX / window.innerWidth) * 100;
-        if (newWidth > 20 && newWidth < 80) setLeftWidth(newWidth);
-    };
-
     return (
-        <main className="h-screen flex flex-col max-w-full">
+        <main className="flex flex-col max-w-full h-screen">
             {/* Header */}
             <header className="p-4 border-b">
                 <h1 className="text-2xl font-bold">Itinerary Planner</h1>
@@ -119,23 +136,26 @@ export default function PlannerPage() {
                     onReset={() => {
                         setStartDate("");
                         setEndDate("");
+                        setDetectedDates([]);
                     }}
                 />
             </div>
 
             {/* Split Pane */}
-            <div className="flex flex-1 w-full overflow-hidden">
-                {/* LEFT: Planner Controls */}
+            <div className="flex flex-1 w-full">
+                {/* LEFT: Planner Controls with scroll */}
                 <div
                     className="p-4 overflow-y-auto"
-                    style={{ width: `${leftWidth}%`, minWidth: "20%" }}
+                    style={{
+                        width: `${leftWidth}%`,
+                        minWidth: "20%",
+                        maxHeight: "calc(100vh - 160px)", // leave space for header + extractor
+                    }}
                 >
                     {/* Date Range Input */}
                     <div className="flex gap-4 mb-6">
                         <div>
-                            <label className="block text-sm font-medium mb-1">
-                                Start Date
-                            </label>
+                            <label className="block text-sm font-medium mb-1">Start Date</label>
                             <input
                                 type="date"
                                 value={startDate}
@@ -178,8 +198,7 @@ export default function PlannerPage() {
                             <SavePlanButton
                                 planData={{ startDate, endDate, pois: allPois }}
                                 onPlanSaved={(saved) => {
-                                    const id =
-                                        (saved as any)?.plan?.id ?? (saved as any)?.id;
+                                    const id = (saved as any)?.plan?.id ?? (saved as any)?.id;
                                     if (id) router.push(`/planner/${id}`);
                                 }}
                                 backendUrl={BACKEND_URL}
@@ -197,22 +216,16 @@ export default function PlannerPage() {
 
                 {/* DRAG HANDLE */}
                 <div
-                    onMouseDown={(e) => {
-                        e.preventDefault();
-                        const move = (ev: MouseEvent) => handleDrag(ev as any);
-                        const up = () => {
-                            window.removeEventListener("mousemove", move);
-                            window.removeEventListener("mouseup", up);
-                        };
-                        window.addEventListener("mousemove", move);
-                        window.addEventListener("mouseup", up);
-                    }}
+                    onMouseDown={startDrag}
                     className="w-2 bg-gray-300 cursor-col-resize hover:bg-gray-400"
                 />
 
-                {/* RIGHT: Map fills full height */}
-                <div className="flex-1 relative">
-                    <div className="absolute inset-0 h-full w-full">
+                {/* RIGHT: Map */}
+                <div
+                    className="p-4"
+                    style={{ flexGrow: 1, width: `${100 - leftWidth}%`, minWidth: "20%" }}
+                >
+                    <div className="h-full w-full border rounded shadow">
                         <PlannerMap pois={currentDayPois} />
                     </div>
                 </div>

@@ -173,7 +173,10 @@ export default function DayPOISection({
                     <SearchPOI
                         city={city}
                         onPick={(poi: POI) =>
-                            onUpdatePois(day, [...initialPois, { ...poi, sequence: initialPois.length + 1 }])
+                            onUpdatePois(day, [
+                                ...initialPois,
+                                { ...poi, sequence: initialPois.length + 1 },
+                            ])
                         }
                         placeholder="Search POI..."
                     />
@@ -190,7 +193,11 @@ export default function DayPOISection({
                             ref={provided.innerRef}
                         >
                             {initialPois.map((poi: POI, i: number) => (
-                                <Draggable key={i.toString()} draggableId={`poi-${day}-${i}`} index={i}>
+                                <Draggable
+                                    key={i.toString()}
+                                    draggableId={`poi-${day}-${i}`}
+                                    index={i}
+                                >
                                     {(provided) => (
                                         <li
                                             ref={provided.innerRef}
@@ -198,9 +205,9 @@ export default function DayPOISection({
                                             {...provided.dragHandleProps}
                                             className="flex justify-between items-center p-2 border rounded bg-white shadow-sm"
                                         >
-                      <span>
-                        {i + 1}. {poi.name}
-                      </span>
+                                            <span>
+                                                {i + 1}. {poi.name}
+                                            </span>
                                             <button
                                                 onClick={() => handleDeletePOI(i)}
                                                 className="text-red-500 hover:text-red-700 text-sm"

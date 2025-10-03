@@ -17,6 +17,7 @@ export default function FlightDateExtractor({
     const [endDate, setEndDate] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [confirmed, setConfirmed] = useState(false);
+    const [hidden, setHidden] = useState(true); // default hidden
 
     const extractDates = (text: string) => {
         const dateRegex =
@@ -46,7 +47,10 @@ export default function FlightDateExtractor({
             setLoading(true);
 
             try {
-                const { data } = await Tesseract.recognize(reader.result as string, "eng");
+                const { data } = await Tesseract.recognize(
+                    reader.result as string,
+                    "eng"
+                );
                 extractDates(data.text);
             } catch (err) {
                 console.error("OCR failed:", err);
@@ -60,7 +64,7 @@ export default function FlightDateExtractor({
     const handleConfirm = () => {
         if (startDate && endDate) {
             onSelect(startDate, endDate);
-            setConfirmed(true); // ✅ Hide UI after confirming
+            setConfirmed(true);
         }
     };
 
@@ -73,19 +77,37 @@ export default function FlightDateExtractor({
         onReset();
     };
 
-    if (confirmed) {
+    // When hidden (first load), show only the button
+    if (hidden) {
         return (
             <div className="p-4 border rounded bg-gray-50">
-                <h3 className="font-semibold mb-2">Selected Dates:</h3>
-                <p>
-                    Start Date: <span className="font-semibold">{startDate}</span>
-                </p>
-                <p>
-                    End Date: <span className="font-semibold">{endDate}</span>
-                </p>
+                <button
+                    onClick={() => setHidden(false)}
+                    className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                >
+                    Upload Flight Screenshot
+                </button>
+            </div>
+        );
+    }
+
+    // When confirmed, show results with Reset
+    if (confirmed) {
+        return (
+            <div className="p-4 border rounded bg-gray-50 flex items-center justify-between gap-4">
+                <div className="flex gap-6">
+                    <p>
+                        <span className="font-semibold">Start Date:</span>{" "}
+                        <span className="font-semibold">{startDate}</span>
+                    </p>
+                    <p>
+                        <span className="font-semibold">End Date:</span>{" "}
+                        <span className="font-semibold">{endDate}</span>
+                    </p>
+                </div>
                 <button
                     onClick={handleReset}
-                    className="mt-4 bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
                 >
                     Reset
                 </button>
@@ -95,12 +117,30 @@ export default function FlightDateExtractor({
 
     return (
         <div>
-            <h3 className="font-semibold mb-2">Upload Flight Screenshot:</h3>
-            <input type="file" accept="image/*" onChange={handleFileUpload} className="mb-4" />
+            <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold">Upload Flight Screenshot:</h3>
+                <button
+                    onClick={() => setHidden(true)}
+                    className="bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600"
+                >
+                    Hide
+                </button>
+            </div>
+
+            <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                className="mb-4"
+            />
 
             {preview && (
                 <div className="mb-4">
-                    <img src={preview} alt="Uploaded preview" className="max-h-48 rounded" />
+                    <img
+                        src={preview}
+                        alt="Uploaded preview"
+                        className="max-h-48 rounded"
+                    />
                 </div>
             )}
 
@@ -114,7 +154,7 @@ export default function FlightDateExtractor({
                         onClick={() => {
                             if (!startDate) setStartDate(d);
                             else if (!endDate) setEndDate(d);
-                            else setStartDate(d); // overwrite if both already set
+                            else setStartDate(d);
                         }}
                         className={`border p-2 rounded ${
                             d === startDate
@@ -129,13 +169,21 @@ export default function FlightDateExtractor({
                 ))}
             </div>
 
-            <div className="mt-4">
-                <p>
-                    Start Date: <span className="font-semibold">{startDate ?? "Not set"}</span>
-                </p>
-                <p>
-                    End Date: <span className="font-semibold">{endDate ?? "Not set"}</span>
-                </p>
+            <div className="flex items-center justify-between gap-4 mt-4">
+                <div className="flex gap-6">
+                    <p>
+                        <span className="font-semibold">Start Date:</span>{" "}
+                        <span className="font-semibold">
+                            {startDate ?? "Not set"}
+                        </span>
+                    </p>
+                    <p>
+                        <span className="font-semibold">End Date:</span>{" "}
+                        <span className="font-semibold">
+                            {endDate ?? "Not set"}
+                        </span>
+                    </p>
+                </div>
             </div>
 
             <div className="flex gap-2 mt-4">
@@ -148,9 +196,9 @@ export default function FlightDateExtractor({
                 </button>
                 <button
                     onClick={handleReset}
-                    className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                    className="bg-gray-400 text-white px-3 py-1 rounded hover:bg-gray-500"
                 >
-                    Reset
+                    Clear
                 </button>
             </div>
         </div>
