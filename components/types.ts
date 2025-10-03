@@ -6,7 +6,7 @@ export interface POI {
     lng: number;
     sequence: number;
     day: number;
-
+    city?: string;
     date?: string; // ✅ optional support for date-based itineraries
 }
 
