@@ -5,8 +5,8 @@ import SearchPOI from "@/components/SearchPOI";
 
 interface DayPOISectionProps {
     day: number;
-    date: string;   // ✅ required now
-    city: string;
+    date?: string;   // ✅ optional now
+    city?: string;   // ✅ optional now
     initialPois: POI[];
     onUpdatePois: (day: number, pois: POI[]) => void;
     onSelectDay: (day: number) => void;
@@ -96,7 +96,7 @@ export default function DayPOISection({
             onClick={() => onSelectDay(day)}
         >
             <h3 className="font-semibold">
-                {new Date(date).toDateString()} — Day {day}{" "}
+                {date ? new Date(date).toDateString() : "No date"} — Day {day}{" "}
                 {isActive && <span className="text-green-600">Active</span>}
             </h3>
 
@@ -105,7 +105,7 @@ export default function DayPOISection({
                 <label className="block text-sm font-medium">Select City:</label>
                 <input
                     type="text"
-                    value={city}
+                    value={city ?? ""}  // ✅ fallback
                     onChange={(e) => onCityChange(day, e.target.value)}
                     className="border px-2 py-1 rounded w-full"
                     placeholder="e.g. Shanghai, China"
