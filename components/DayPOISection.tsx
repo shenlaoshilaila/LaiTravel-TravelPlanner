@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { POI } from "@/components/types";
 import SearchPOI from "@/components/SearchPOI";
 import {
@@ -7,8 +7,6 @@ import {
     Droppable,
     Draggable,
     DropResult,
-    DroppableProvided,
-    DraggableProvided,
 } from "react-beautiful-dnd";
 
 interface DayPOISectionProps {
@@ -30,6 +28,45 @@ interface DistanceInfo {
     walking: string;
 }
 
+/** --- City Autocomplete Input --- */
+function CitySearch({
+                        value,
+                        onChange,
+                    }: {
+    value?: string;
+    onChange: (city: string) => void;
+}) {
+    const inputRef = useRef<HTMLInputElement | null>(null);
+    const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+
+    useEffect(() => {
+        if (inputRef.current && (window as any).google) {
+            autocompleteRef.current = new google.maps.places.Autocomplete(
+                inputRef.current,
+                { types: ["(cities)"] }
+            );
+            autocompleteRef.current.addListener("place_changed", () => {
+                const place = autocompleteRef.current?.getPlace();
+                if (place?.formatted_address) {
+                    onChange(place.formatted_address);
+                } else if (place?.name) {
+                    onChange(place.name);
+                }
+            });
+        }
+    }, []);
+
+    return (
+        <input
+            ref={inputRef}
+            type="text"
+            className="border px-2 py-1 rounded w-full"
+            placeholder="Search city..."
+            defaultValue={value}
+        />
+    );
+}
+
 export default function DayPOISection({
                                           day,
                                           date,
@@ -42,26 +79,7 @@ export default function DayPOISection({
                                       }: DayPOISectionProps) {
     const [distances, setDistances] = useState<DistanceInfo[]>([]);
 
-    // ✅ Delete a POI
-    const handleDelete = (index: number) => {
-        const updated = initialPois.filter((_, i) => i !== index);
-        onUpdatePois(day, updated);
-    };
-
-    // ✅ Handle reorder with react-beautiful-dnd
-    const handleDragEnd = (result: DropResult) => {
-        if (!result.destination) return;
-
-        const items = Array.from(initialPois);
-        const [moved] = items.splice(result.source.index, 1);
-        items.splice(result.destination.index, 0, moved);
-
-        // reassign sequence numbers
-        const reordered = items.map((p, i) => ({ ...p, sequence: i + 1 }));
-        onUpdatePois(day, reordered);
-    };
-
-    // ✅ Compute distances
+    // --- Calculate distance matrix ---
     useEffect(() => {
         if (initialPois.length < 2 || !(window as any).google) return;
 
@@ -116,6 +134,21 @@ export default function DayPOISection({
         });
     }, [initialPois]);
 
+    // --- Drag & Drop reorder ---
+    const handleDragEnd = (result: DropResult) => {
+        if (!result.destination) return;
+        const reordered = Array.from(initialPois);
+        const [moved] = reordered.splice(result.source.index, 1);
+        reordered.splice(result.destination.index, 0, moved);
+        onUpdatePois(day, reordered.map((p, i) => ({ ...p, sequence: i + 1 })));
+    };
+
+    // --- Delete POI ---
+    const handleDeletePOI = (index: number) => {
+        const updated = initialPois.filter((_, i) => i !== index);
+        onUpdatePois(day, updated.map((p, i) => ({ ...p, sequence: i + 1 })));
+    };
+
     return (
         <div
             className={`p-4 border rounded mb-4 ${
@@ -128,16 +161,10 @@ export default function DayPOISection({
                 {isActive && <span className="text-green-600">Active</span>}
             </h3>
 
-            {/* City Input */}
+            {/* City Input with Autocomplete */}
             <div className="mt-2">
                 <label className="block text-sm font-medium">Select City:</label>
-                <input
-                    type="text"
-                    value={city ?? ""}
-                    onChange={(e) => onCityChange(day, e.target.value)}
-                    className="border px-2 py-1 rounded w-full"
-                    placeholder="e.g. Shanghai, China"
-                />
+                <CitySearch value={city} onChange={(c) => onCityChange(day, c)} />
             </div>
 
             {/* POI Search */}
@@ -145,40 +172,38 @@ export default function DayPOISection({
                 <div className="mt-2">
                     <SearchPOI
                         city={city}
-                        onPick={(poi: POI) => onUpdatePois(day, [...initialPois, poi])}
+                        onPick={(poi: POI) =>
+                            onUpdatePois(day, [...initialPois, { ...poi, sequence: initialPois.length + 1 }])
+                        }
                         placeholder="Search POI..."
                     />
                 </div>
             )}
 
-            {/* List of POIs with drag-and-drop + delete */}
+            {/* POI List with Drag & Drop + Delete */}
             <DragDropContext onDragEnd={handleDragEnd}>
                 <Droppable droppableId={`day-${day}`}>
-                    {(provided: DroppableProvided) => (
+                    {(provided) => (
                         <ul
                             className="space-y-1 mt-2"
                             {...provided.droppableProps}
                             ref={provided.innerRef}
                         >
                             {initialPois.map((poi: POI, i: number) => (
-                                <Draggable
-                                    key={poi.name + i}
-                                    draggableId={poi.name + i}
-                                    index={i}
-                                >
-                                    {(provided: DraggableProvided) => (
+                                <Draggable key={i.toString()} draggableId={`poi-${day}-${i}`} index={i}>
+                                    {(provided) => (
                                         <li
                                             ref={provided.innerRef}
                                             {...provided.draggableProps}
                                             {...provided.dragHandleProps}
-                                            className="flex justify-between items-center border p-2 rounded bg-white shadow-sm"
+                                            className="flex justify-between items-center p-2 border rounded bg-white shadow-sm"
                                         >
                       <span>
                         {i + 1}. {poi.name}
                       </span>
                                             <button
-                                                onClick={() => handleDelete(i)}
-                                                className="ml-2 text-red-500 hover:text-red-700 font-bold"
+                                                onClick={() => handleDeletePOI(i)}
+                                                className="text-red-500 hover:text-red-700 text-sm"
                                             >
                                                 ✕
                                             </button>
