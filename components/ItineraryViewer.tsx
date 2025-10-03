@@ -11,7 +11,6 @@ interface ItineraryViewerProps {
   onPoisChanged?: (all: POI[]) => void;
 }
 
-// 🔹 Define backend URL
 const BACKEND_URL = "https://travelplanner-720040112489.us-east1.run.app";
 
 export default function ItineraryViewer({
@@ -25,15 +24,10 @@ export default function ItineraryViewer({
       poisByDay[0]?.day ?? 1
   );
 
-  // ✅ Track per-day city if needed
   const [citiesByDay, setCitiesByDay] = React.useState<Record<number, string>>(
-      () =>
-          Object.fromEntries(
-              poisByDay.map((d) => [d.day, city]) // default city applied to all days
-          )
+      () => Object.fromEntries(poisByDay.map((d) => [d.day, city]))
   );
 
-  // Update local POIs when changed
   const handleUpdatePois = (day: number, nextForDay: POI[]) => {
     const next = unsavedPOIs.map((d) =>
         d.day === day ? { ...d, pois: nextForDay } : d
@@ -42,12 +36,10 @@ export default function ItineraryViewer({
     onPoisChanged?.(next.flatMap((d) => d.pois));
   };
 
-  // ✅ Handle city change per day
   const handleCityChange = (day: number, newCity: string) => {
     setCitiesByDay((prev) => ({ ...prev, [day]: newCity }));
   };
 
-  // Save all POIs to backend
   const handleSavePlan = async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/api/itinerary/${id}/save`, {
@@ -69,16 +61,14 @@ export default function ItineraryViewer({
               <DayPOISection
                   day={day}
                   city={citiesByDay[day] ?? city}
-                  itineraryId={id}
                   initialPois={pois}
                   isActive={activeDay === day}
                   onSelectDay={setActiveDay}
                   onUpdatePois={handleUpdatePois}
-                  onCityChange={handleCityChange} // ✅ FIXED
+                  onCityChange={handleCityChange}
                   backendUrl={BACKEND_URL}
               />
 
-              {/* Driving time between POIs */}
               {pois.length > 1 && (
                   <ol className="pl-8">
                     {pois.map((p, i) =>
@@ -106,10 +96,9 @@ export default function ItineraryViewer({
       </div>
   );
 
-  // Simple haversine driving time mock
   function getDrivingTime(p1: POI, p2: POI): string {
     if (!p1 || !p2) return "";
-    const R = 6371; // km
+    const R = 6371;
     const dLat = ((p2.lat - p1.lat) * Math.PI) / 180;
     const dLng = ((p2.lng - p1.lng) * Math.PI) / 180;
     const a =
