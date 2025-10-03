@@ -90,6 +90,9 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                                     day: 0,
                                 });
                             }
+                            // ✅ clear dropdown + input
+                            setQuery("");
+                            setResults([]);
                         }}
                     >
                         <div className="font-medium">{p.name}</div>
