@@ -6,7 +6,7 @@ import SavePlanButton from "@/components/SavePlanButton";
 import { POI, DayPOI } from "@/components/types";
 import { useRouter } from "next/navigation";
 import AIChatBar from "@/components/AIChatBar";
-import Tesseract from "tesseract.js";
+import FlightDateExtractor from "@/components/FlightDateExtractor";
 
 const BACKEND_URL = "https://travelplanner-720040112489.us-east1.run.app";
 
@@ -20,6 +20,10 @@ export default function PlannerPage() {
     const [dayPOIs, setDayPOIs] = useState<DayPOI[]>([]);
     const [selectedDay, setSelectedDay] = useState<number | null>(1);
     const [user, setUser] = useState<User>(null);
+
+    const [detectedDates, setDetectedDates] = useState<
+        { start: string; end: string }[]
+    >([]);
 
     // 🔐 Fetch current user
     useEffect(() => {
@@ -102,54 +106,28 @@ export default function PlannerPage() {
         if (newWidth > 20 && newWidth < 80) setLeftWidth(newWidth);
     };
 
-    // --- OCR: Extract dates from flight screenshot ---
-    async function extractDatesFromImage(file: File) {
-        const { data } = await Tesseract.recognize(file, "eng");
-        const text = data.text;
-
-        // Regex like "Oct 3, 2025"
-        const dateRegex = /([A-Za-z]{3,9}\s\d{1,2},\s\d{4})/g;
-        const matches = text.match(dateRegex);
-
-        if (!matches || matches.length < 2) {
-            alert("Could not detect both departure & return dates.");
-            return null;
-        }
-
-        const departDate = new Date(matches[0]);
-        const returnDate = new Date(matches[1]);
-
-        return { departDate, returnDate };
-    }
-
-    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (!e.target.files?.[0]) return;
-        const result = await extractDatesFromImage(e.target.files[0]);
-        if (result) {
-            setStartDate(result.departDate.toISOString().split("T")[0]);
-            setEndDate(result.returnDate.toISOString().split("T")[0]);
-        }
-    };
-
     return (
         <main className="h-screen flex flex-col max-w-full">
             {/* Header */}
-            <header className="p-4 border-b flex justify-between items-center">
+            <header className="p-4 border-b">
                 <h1 className="text-2xl font-bold">Itinerary Planner</h1>
-
-                {/* Upload Flight Screenshot */}
-                <div>
-                    <label className="cursor-pointer bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                        Upload Flight Screenshot
-                        <input
-                            type="file"
-                            accept="image/*,.pdf"
-                            onChange={handleUpload}
-                            className="hidden"
-                        />
-                    </label>
-                </div>
             </header>
+
+            {/* Flight Date Extractor */}
+            <div className="p-4 border-b">
+                <FlightDateExtractor
+                    detectedDates={detectedDates ?? []} // ✅ ensure it's an array
+                    onSelect={(start, end) => {
+                        setStartDate(start);
+                        setEndDate(end);
+                    }}
+                    onReset={() => {
+                        setStartDate("");
+                        setEndDate("");
+                        setDetectedDates([]);
+                    }}
+                />
+            </div>
 
             {/* Split Pane */}
             <div className="flex flex-1 w-full overflow-hidden">
@@ -161,7 +139,9 @@ export default function PlannerPage() {
                     {/* Date Range Input */}
                     <div className="flex gap-4 mb-6">
                         <div>
-                            <label className="block text-sm font-medium mb-1">Start Date</label>
+                            <label className="block text-sm font-medium mb-1">
+                                Start Date
+                            </label>
                             <input
                                 type="date"
                                 value={startDate}
@@ -186,8 +166,8 @@ export default function PlannerPage() {
                             <DayPOISection
                                 key={day}
                                 day={day}
-                                date={date}
-                                city={city}
+                                date={date ?? ""} // ✅ always string
+                                city={city ?? ""} // ✅ always string
                                 initialPois={pois}
                                 onUpdatePois={updatePOIsForDay}
                                 onSelectDay={setSelectedDay}
@@ -204,7 +184,8 @@ export default function PlannerPage() {
                             <SavePlanButton
                                 planData={{ startDate, endDate, pois: allPois }}
                                 onPlanSaved={(saved) => {
-                                    const id = (saved as any)?.plan?.id ?? (saved as any)?.id;
+                                    const id =
+                                        (saved as any)?.plan?.id ?? (saved as any)?.id;
                                     if (id) router.push(`/planner/${id}`);
                                 }}
                                 backendUrl={BACKEND_URL}
