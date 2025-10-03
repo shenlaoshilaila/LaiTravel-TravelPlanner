@@ -6,14 +6,14 @@ export interface POI {
     lng: number;
     sequence: number;
     day: number;
-    city?: string;
+
     date?: string; // ✅ optional support for date-based itineraries
 }
 
 export interface DayPOI {
     day: number;
-    date?: string; // ✅ optional per-day date (yyyy-mm-dd)
-    city?: string;
+    date: string; // ✅ optional per-day date (yyyy-mm-dd)
+    city: string;
     pois: POI[];
 }
 

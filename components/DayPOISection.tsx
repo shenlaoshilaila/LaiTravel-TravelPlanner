@@ -5,7 +5,7 @@ import SearchPOI from "@/components/SearchPOI";
 
 interface DayPOISectionProps {
     day: number;
-    date?: string;
+    date: string;   // ✅ required now
     city: string;
     initialPois: POI[];
     onUpdatePois: (day: number, pois: POI[]) => void;
@@ -96,7 +96,7 @@ export default function DayPOISection({
             onClick={() => onSelectDay(day)}
         >
             <h3 className="font-semibold">
-                {date ? new Date(date).toDateString() : "No date"} — Day {day}{" "}
+                {new Date(date).toDateString()} — Day {day}{" "}
                 {isActive && <span className="text-green-600">Active</span>}
             </h3>
 
