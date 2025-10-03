@@ -1,11 +1,12 @@
 "use client";
-import React, { useState, useEffect, useMemo } from "react";
-import DayPOISection from "@/components/DayPOISection";   // ✅ FIXED
+import React, { useEffect, useState, useMemo } from "react";
+import DayPOISection from "@/components/DayPOISection";
 import PlannerMap from "@/components/PlannerMap";
 import SavePlanButton from "@/components/SavePlanButton";
-import { POI, DayPOI } from "@/components/types";          // ✅ FIXED
+import { POI, DayPOI } from "@/components/types";
 import { useRouter } from "next/navigation";
 import AIChatBar from "@/components/AIChatBar";
+import Tesseract from "tesseract.js";
 
 const BACKEND_URL = "https://travelplanner-720040112489.us-east1.run.app";
 
@@ -52,7 +53,7 @@ export default function PlannerPage() {
                 date: d.toISOString().split("T")[0],
                 city: "",
                 pois: [],
-            });
+            } as any);
             dayCount++;
         }
         setDayPOIs(newDays);
@@ -101,11 +102,53 @@ export default function PlannerPage() {
         if (newWidth > 20 && newWidth < 80) setLeftWidth(newWidth);
     };
 
+    // --- OCR: Extract dates from flight screenshot ---
+    async function extractDatesFromImage(file: File) {
+        const { data } = await Tesseract.recognize(file, "eng");
+        const text = data.text;
+
+        // Regex like "Oct 3, 2025"
+        const dateRegex = /([A-Za-z]{3,9}\s\d{1,2},\s\d{4})/g;
+        const matches = text.match(dateRegex);
+
+        if (!matches || matches.length < 2) {
+            alert("Could not detect both departure & return dates.");
+            return null;
+        }
+
+        const departDate = new Date(matches[0]);
+        const returnDate = new Date(matches[1]);
+
+        return { departDate, returnDate };
+    }
+
+    const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files?.[0]) return;
+        const result = await extractDatesFromImage(e.target.files[0]);
+        if (result) {
+            setStartDate(result.departDate.toISOString().split("T")[0]);
+            setEndDate(result.returnDate.toISOString().split("T")[0]);
+        }
+    };
+
     return (
         <main className="h-screen flex flex-col max-w-full">
             {/* Header */}
-            <header className="p-4 border-b">
+            <header className="p-4 border-b flex justify-between items-center">
                 <h1 className="text-2xl font-bold">Itinerary Planner</h1>
+
+                {/* Upload Flight Screenshot */}
+                <div>
+                    <label className="cursor-pointer bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                        Upload Flight Screenshot
+                        <input
+                            type="file"
+                            accept="image/*,.pdf"
+                            onChange={handleUpload}
+                            className="hidden"
+                        />
+                    </label>
+                </div>
             </header>
 
             {/* Split Pane */}
@@ -161,8 +204,7 @@ export default function PlannerPage() {
                             <SavePlanButton
                                 planData={{ startDate, endDate, pois: allPois }}
                                 onPlanSaved={(saved) => {
-                                    const id =
-                                        (saved as any)?.plan?.id ?? (saved as any)?.id;
+                                    const id = (saved as any)?.plan?.id ?? (saved as any)?.id;
                                     if (id) router.push(`/planner/${id}`);
                                 }}
                                 backendUrl={BACKEND_URL}
