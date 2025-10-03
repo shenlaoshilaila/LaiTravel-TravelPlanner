@@ -1,12 +1,13 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { Autocomplete } from "@react-google-maps/api";
 import { POI } from "@/components/types";
 import SearchPOI from "@/components/SearchPOI";
 
 interface DayPOISectionProps {
     day: number;
-    date?: string;   // ✅ optional now
-    city?: string;   // ✅ optional now
+    date?: string;
+    city?: string;
     initialPois: POI[];
     onUpdatePois: (day: number, pois: POI[]) => void;
     onSelectDay: (day: number) => void;
@@ -33,7 +34,10 @@ export default function DayPOISection({
                                           isActive,
                                       }: DayPOISectionProps) {
     const [distances, setDistances] = useState<DistanceInfo[]>([]);
+    const [autocomplete, setAutocomplete] =
+        useState<google.maps.places.Autocomplete | null>(null);
 
+    // --- Distance calculation ---
     useEffect(() => {
         if (initialPois.length < 2 || !(window as any).google) return;
 
@@ -88,6 +92,18 @@ export default function DayPOISection({
         });
     }, [initialPois]);
 
+    // --- Handle Autocomplete Place selection ---
+    const handlePlaceChanged = () => {
+        if (autocomplete) {
+            const place = autocomplete.getPlace();
+            if (place && place.formatted_address) {
+                onCityChange(day, place.formatted_address);
+            } else if (place && place.name) {
+                onCityChange(day, place.name);
+            }
+        }
+    };
+
     return (
         <div
             className={`p-4 border rounded mb-4 ${
@@ -100,16 +116,22 @@ export default function DayPOISection({
                 {isActive && <span className="text-green-600">Active</span>}
             </h3>
 
-            {/* City Input */}
+            {/* City Autocomplete */}
             <div className="mt-2">
                 <label className="block text-sm font-medium">Select City:</label>
-                <input
-                    type="text"
-                    value={city ?? ""}  // ✅ fallback
-                    onChange={(e) => onCityChange(day, e.target.value)}
-                    className="border px-2 py-1 rounded w-full"
-                    placeholder="e.g. Shanghai, China"
-                />
+                <Autocomplete
+                    onLoad={(auto) => setAutocomplete(auto)}
+                    onPlaceChanged={handlePlaceChanged}
+                    options={{ types: ["(cities)"] }}
+                >
+                    <input
+                        type="text"
+                        value={city ?? ""}
+                        onChange={(e) => onCityChange(day, e.target.value)}
+                        className="border px-2 py-1 rounded w-full"
+                        placeholder="e.g. Shanghai, China"
+                    />
+                </Autocomplete>
             </div>
 
             {/* POI Search */}

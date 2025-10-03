@@ -17,7 +17,7 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
     const mapRef = useRef<HTMLDivElement | null>(null);
     const serviceRef = useRef<google.maps.places.PlacesService | null>(null);
 
-    // ✅ Initialize PlacesService once Google Maps is ready
+    // Initialize PlacesService
     useEffect(() => {
         if (mapRef.current && !serviceRef.current && (window as any).google) {
             const dummyMap = new google.maps.Map(mapRef.current);
@@ -28,7 +28,7 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
     const handleSearch = () => {
         if (!query) return;
         if (!serviceRef.current) {
-            setError("Google Maps Places API not loaded yet.");
+            setError("Google Maps API not loaded yet.");
             return;
         }
 
@@ -36,12 +36,12 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
         setError(null);
         setResults([]);
 
-        const text = city ? `${query} in ${city}` : query;
+        const text = city ? `${query}, ${city}` : query;
 
         serviceRef.current.textSearch({ query: text }, (places, status) => {
             setLoading(false);
 
-            if (status === google.maps.places.PlacesServiceStatus.OK && places) {
+            if (status === google.maps.places.PlacesServiceStatus.OK && places && places.length > 0) {
                 setResults(places);
             } else {
                 console.warn("Places search failed:", status);
@@ -52,10 +52,10 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
 
     return (
         <div>
-            {/* Hidden div required for PlacesService */}
+            {/* hidden map container for PlacesService */}
             <div ref={mapRef} style={{ display: "none" }} />
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 mt-2">
                 <input
                     type="text"
                     placeholder={placeholder ?? "Search places..."}
@@ -89,8 +89,6 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                                     sequence: 0,
                                     day: 0,
                                 });
-                                setQuery("");      // ✅ clear after picking
-                                setResults([]);    // ✅ close dropdown
                             }
                         }}
                     >
