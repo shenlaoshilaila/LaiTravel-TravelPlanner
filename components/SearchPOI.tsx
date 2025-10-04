@@ -82,33 +82,25 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                         className="cursor-pointer p-2 border rounded hover:bg-gray-100"
                         onClick={() => {
                             if (p.geometry?.location) {
-                                const latVal = typeof p.geometry.location.lat === "function"
-                                    ? p.geometry.location.lat()
-                                    : p.geometry.location.lat;
+                                const latFn = p.geometry.location.lat;
+                                const lngFn = p.geometry.location.lng;
 
-                                const lngVal = typeof p.geometry.location.lng === "function"
-                                    ? p.geometry.location.lng()
-                                    : p.geometry.location.lng;
+                                const lat = typeof latFn === "function" ? latFn() : (p.geometry.location as any).lat;
+                                const lng = typeof lngFn === "function" ? lngFn() : (p.geometry.location as any).lng;
 
-                                const lat = Number(latVal);
-                                const lng = Number(lngVal);
+                                const poi: POI = {
+                                    name: p.name ?? "Unknown",
+                                    lat: Number(lat),
+                                    lng: Number(lng),
+                                    sequence: 0,
+                                    day: 0,
+                                    placeId: p.place_id ?? "",
+                                    city: p.formatted_address ?? ""
+                                };
 
-                                if (!isNaN(lat) && !isNaN(lng)) {
-                                    onPick({
-                                        name: p.name ?? "Unknown",
-                                        lat,
-                                        lng,
-                                        sequence: 0,
-                                        day: 0,
-                                        placeId: p.place_id ?? "",
-                                        city: p.formatted_address ?? ""
-                                    });
-                                } else {
-                                    console.error("❌ Invalid lat/lng for place:", p);
-                                }
+                                console.log("✅ Picked POI:", poi);
+                                onPick(poi);
                             }
-
-                            // ✅ clear dropdown + input
                             setQuery("");
                             setResults([]);
                         }}

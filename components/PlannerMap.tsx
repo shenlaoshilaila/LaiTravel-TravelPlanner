@@ -32,13 +32,15 @@ export default function PlannerMap({ pois }: PlannerMapProps) {
         markersRef.current = [];
 
         pois.forEach((poi) => {
+            console.log("📍 Rendering POI on map:", poi);
+
             if (
                 typeof poi.lat !== "number" ||
                 typeof poi.lng !== "number" ||
                 isNaN(poi.lat) ||
                 isNaN(poi.lng)
             ) {
-                console.error("❌ Skipping invalid POI (lat/lng not number):", poi);
+                console.error("❌ Invalid POI lat/lng:", poi);
                 return;
             }
 
@@ -48,12 +50,9 @@ export default function PlannerMap({ pois }: PlannerMapProps) {
                 title: poi.name,
             });
 
-            // --- Handle Click: fetch details by placeId ---
             marker.addListener("click", () => {
                 if (!poi.placeId) {
-                    infoWindowRef.current?.setContent(
-                        `<div><strong>${poi.name}</strong><p>No details available.</p></div>`
-                    );
+                    infoWindowRef.current?.setContent(`<div><strong>${poi.name}</strong><p>No details available.</p></div>`);
                     infoWindowRef.current?.open(mapInstance.current!, marker);
                     return;
                 }
@@ -84,9 +83,7 @@ export default function PlannerMap({ pois }: PlannerMapProps) {
                             infoWindowRef.current?.setContent(content);
                             infoWindowRef.current?.open(mapInstance.current!, marker);
                         } else {
-                            infoWindowRef.current?.setContent(
-                                `<div><strong>${poi.name}</strong><p>Details unavailable</p></div>`
-                            );
+                            infoWindowRef.current?.setContent(`<div><strong>${poi.name}</strong><p>Details unavailable</p></div>`);
                             infoWindowRef.current?.open(mapInstance.current!, marker);
                         }
                     }
