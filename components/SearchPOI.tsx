@@ -82,12 +82,17 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                         className="cursor-pointer p-2 border rounded hover:bg-gray-100"
                         onClick={() => {
                             if (p.geometry?.location) {
+                                const lat = p.geometry.location.lat();
+                                const lng = p.geometry.location.lng();
+
                                 onPick({
                                     name: p.name ?? "Unknown",
-                                    lat: p.geometry.location.lat(),
-                                    lng: p.geometry.location.lng(),
+                                    lat: typeof lat === "number" ? lat : Number(lat),
+                                    lng: typeof lng === "number" ? lng : Number(lng),
                                     sequence: 0,
                                     day: 0,
+                                    placeId: p.place_id ?? "", // ✅ now included
+                                    city: p.formatted_address ?? ""
                                 });
                             }
                             // ✅ clear dropdown + input
