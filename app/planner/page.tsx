@@ -26,7 +26,7 @@ export default function PlannerPage() {
     >([]);
 
     // --- Resizable Split Pane state ---
-    const [leftWidth, setLeftWidth] = useState(50); // % width for left panel
+    const [leftWidth, setLeftWidth] = useState(50);
     const handleDrag = (e: MouseEvent) => {
         const newWidth = (e.clientX / window.innerWidth) * 100;
         if (newWidth > 20 && newWidth < 80) {
@@ -143,13 +143,13 @@ export default function PlannerPage() {
 
             {/* Split Pane */}
             <div className="flex flex-1 w-full">
-                {/* LEFT: Planner Controls with scroll */}
+                {/* LEFT: Planner Controls */}
                 <div
                     className="p-4 overflow-y-auto"
                     style={{
                         width: `${leftWidth}%`,
                         minWidth: "20%",
-                        maxHeight: "calc(100vh - 160px)", // leave space for header + extractor
+                        maxHeight: "calc(100vh - 160px)",
                     }}
                 >
                     {/* Date Range Input */}
@@ -231,7 +231,7 @@ export default function PlannerPage() {
                 </div>
             </div>
 
-            {/* Bottom Assistant */}
+            {/* Floating AI Assistant */}
             <AIChatBar
                 city=""
                 days={dayPOIs.length}
