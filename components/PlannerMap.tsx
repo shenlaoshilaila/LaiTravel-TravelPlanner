@@ -17,7 +17,7 @@ export default function PlannerMap({ pois }: PlannerMapProps) {
 
         if (!mapInstance.current) {
             mapInstance.current = new google.maps.Map(mapRef.current, {
-                center: { lat: 39.9042, lng: 116.4074 }, // default Beijing
+                center: { lat: 39.9042, lng: 116.4074 }, // Beijing default
                 zoom: 12,
             });
             infoWindowRef.current = new google.maps.InfoWindow();
@@ -27,22 +27,19 @@ export default function PlannerMap({ pois }: PlannerMapProps) {
     useEffect(() => {
         if (!mapInstance.current) return;
 
+        console.log("📌 POIs received by PlannerMap:", pois);
+
         // Clear old markers
         markersRef.current.forEach((m) => m.setMap(null));
         markersRef.current = [];
 
         pois.forEach((poi) => {
-            console.log("📍 Rendering POI on map:", poi);
-
-            if (
-                typeof poi.lat !== "number" ||
-                typeof poi.lng !== "number" ||
-                isNaN(poi.lat) ||
-                isNaN(poi.lng)
-            ) {
-                console.error("❌ Invalid POI lat/lng:", poi);
+            if (!poi.lat || !poi.lng || isNaN(poi.lat) || isNaN(poi.lng)) {
+                console.error("❌ Skipping invalid POI:", poi);
                 return;
             }
+
+            console.log("✅ Adding marker:", poi);
 
             const marker = new google.maps.Marker({
                 position: { lat: poi.lat, lng: poi.lng },
@@ -50,50 +47,18 @@ export default function PlannerMap({ pois }: PlannerMapProps) {
                 title: poi.name,
             });
 
-            marker.addListener("click", () => {
-                if (!poi.placeId) {
-                    infoWindowRef.current?.setContent(`<div><strong>${poi.name}</strong><p>No details available.</p></div>`);
-                    infoWindowRef.current?.open(mapInstance.current!, marker);
-                    return;
-                }
-
-                const service = new google.maps.places.PlacesService(mapInstance.current!);
-                service.getDetails(
-                    {
-                        placeId: poi.placeId,
-                        fields: ["name", "formatted_address", "rating", "photos", "url"],
-                    },
-                    (place, status) => {
-                        if (status === google.maps.places.PlacesServiceStatus.OK && place) {
-                            const photoUrl =
-                                place.photos && place.photos.length > 0
-                                    ? place.photos[0].getUrl({ maxWidth: 300, maxHeight: 200 })
-                                    : null;
-
-                            const content = `
-                                <div style="max-width:300px">
-                                    <h3 style="margin:0;font-size:16px;font-weight:bold;">${place.name}</h3>
-                                    <p style="margin:4px 0;">📍 ${place.formatted_address || "No address"}</p>
-                                    <p style="margin:4px 0;">⭐ Rating: ${place.rating || "N/A"}</p>
-                                    ${photoUrl ? `<img src="${photoUrl}" alt="${place.name}" style="width:100%;border-radius:8px;margin-top:6px;" />` : ""}
-                                    ${place.url ? `<p style="margin-top:6px;"><a href="${place.url}" target="_blank" style="color:blue">View on Google Maps</a></p>` : ""}
-                                </div>
-                            `;
-
-                            infoWindowRef.current?.setContent(content);
-                            infoWindowRef.current?.open(mapInstance.current!, marker);
-                        } else {
-                            infoWindowRef.current?.setContent(`<div><strong>${poi.name}</strong><p>Details unavailable</p></div>`);
-                            infoWindowRef.current?.open(mapInstance.current!, marker);
-                        }
-                    }
-                );
-            });
-
             markersRef.current.push(marker);
+
+            // Simple InfoWindow for now
+            marker.addListener("click", () => {
+                infoWindowRef.current?.setContent(
+                    `<div><strong>${poi.name}</strong><br/>Lat: ${poi.lat}, Lng: ${poi.lng}</div>`
+                );
+                infoWindowRef.current?.open(mapInstance.current!, marker);
+            });
         });
 
-        // Auto-center map
+        // Auto-center
         if (pois.length > 0) {
             const bounds = new google.maps.LatLngBounds();
             pois.forEach((p) => {

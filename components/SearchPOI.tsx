@@ -42,9 +42,10 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
             setLoading(false);
 
             if (status === google.maps.places.PlacesServiceStatus.OK && places && places.length > 0) {
+                console.log("✅ Places found:", places);
                 setResults(places);
             } else {
-                console.warn("Places search failed:", status);
+                console.warn("❌ Places search failed:", status);
                 setError("No results found.");
             }
         });
@@ -82,25 +83,24 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                         className="cursor-pointer p-2 border rounded hover:bg-gray-100"
                         onClick={() => {
                             if (p.geometry?.location) {
-                                const latFn = p.geometry.location.lat;
-                                const lngFn = p.geometry.location.lng;
+                                const lat = Number(p.geometry.location.lat());
+                                const lng = Number(p.geometry.location.lng());
+                                console.log("📍 Picked POI:", { name: p.name, lat, lng, placeId: p.place_id });
 
-                                const lat = typeof latFn === "function" ? latFn() : (p.geometry.location as any).lat;
-                                const lng = typeof lngFn === "function" ? lngFn() : (p.geometry.location as any).lng;
-
-                                const poi: POI = {
+                                onPick({
                                     name: p.name ?? "Unknown",
-                                    lat: Number(lat),
-                                    lng: Number(lng),
+                                    lat,
+                                    lng,
                                     sequence: 0,
                                     day: 0,
                                     placeId: p.place_id ?? "",
-                                    city: p.formatted_address ?? ""
-                                };
-
-                                console.log("✅ Picked POI:", poi);
-                                onPick(poi);
+                                    city: p.formatted_address ?? "",
+                                });
+                            } else {
+                                console.error("❌ No geometry for:", p);
                             }
+
+                            // Clear dropdown + input
                             setQuery("");
                             setResults([]);
                         }}
