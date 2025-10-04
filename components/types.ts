@@ -1,5 +1,6 @@
 // components/types.ts
 
+// A single point of interest (POI)
 export interface POI {
     name: string;
     lat: number;
@@ -8,8 +9,10 @@ export interface POI {
     day: number;
     city?: string;
     date?: string; // ✅ optional support for date-based itineraries
+    placeId?: string; // ✅ NEW: Google Places API unique ID
 }
 
+// A day's worth of POIs
 export interface DayPOI {
     day: number;
     date?: string; // ✅ optional per-day date (yyyy-mm-dd)
@@ -19,17 +22,19 @@ export interface DayPOI {
 
 // When saving, plan can be based on "days" OR a date range
 export interface PlanData {
-    days?: number; // ✅ optional (for simple day count itineraries)
+    days?: number;      // ✅ optional (for simple day count itineraries)
     startDate?: string; // ✅ optional (yyyy-mm-dd)
     endDate?: string;   // ✅ optional (yyyy-mm-dd)
     pois: DayPOI[] | POI[];
 }
 
+// Response returned from backend after saving
 export interface PlanSavedResponse {
     id: string;
     plan?: any; // backend shape fallback
 }
 
+// Props for SavePlanButton component
 export interface SavePlanButtonProps {
     planData: PlanData;
     onPlanSaved?: (saved: PlanSavedResponse) => void;

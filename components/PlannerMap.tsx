@@ -1,87 +1,94 @@
+"use client";
 import React, { useEffect, useRef } from "react";
-import { POI } from "./types";
+import { POI } from "@/components/types";
 
 interface PlannerMapProps {
     pois: POI[];
-    className?: string;  // ✅ allow passing custom className
 }
 
-export default function PlannerMap({ pois, className }: PlannerMapProps) {
+export default function PlannerMap({ pois }: PlannerMapProps) {
     const mapRef = useRef<HTMLDivElement | null>(null);
     const mapInstance = useRef<google.maps.Map | null>(null);
-    const directionsService = useRef<google.maps.DirectionsService | null>(null);
-    const directionsRenderer = useRef<google.maps.DirectionsRenderer | null>(null);
+    const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
     const markersRef = useRef<google.maps.Marker[]>([]);
 
-    // Initialize map once
     useEffect(() => {
-        if (mapRef.current && !mapInstance.current && (window as any).google) {
+        if (!mapRef.current || !(window as any).google) return;
+
+        if (!mapInstance.current) {
             mapInstance.current = new google.maps.Map(mapRef.current, {
-                center: { lat: 30.2741, lng: 120.1551 }, // Hangzhou default
+                center: { lat: 39.9042, lng: 116.4074 }, // default Beijing
                 zoom: 12,
             });
-            directionsService.current = new google.maps.DirectionsService();
-            directionsRenderer.current = new google.maps.DirectionsRenderer({
-                suppressMarkers: true, // ✅ so we can control markers
-            });
-            directionsRenderer.current.setMap(mapInstance.current);
+            infoWindowRef.current = new google.maps.InfoWindow();
         }
     }, []);
 
-    // Update map when POIs change
     useEffect(() => {
-        if (!mapInstance.current || !directionsService.current || !directionsRenderer.current) return;
+        if (!mapInstance.current) return;
 
         // Clear old markers
         markersRef.current.forEach((m) => m.setMap(null));
         markersRef.current = [];
 
-        if (pois.length === 0) {
-            directionsRenderer.current.setDirections({ routes: [] } as any); // clear route
-            return;
-        }
-
-        // Add markers
-        pois.forEach((p, i) => {
+        pois.forEach((poi) => {
             const marker = new google.maps.Marker({
-                position: { lat: p.lat, lng: p.lng },
+                position: { lat: poi.lat, lng: poi.lng },
                 map: mapInstance.current!,
-                label: `${i + 1}`, // number markers
-                title: p.name,
+                title: poi.name,
             });
+
+            // --- Handle Click: fetch details by placeId ---
+            marker.addListener("click", () => {
+                if (!poi.placeId) {
+                    infoWindowRef.current?.setContent(`<div><strong>${poi.name}</strong><p>No details available.</p></div>`);
+                    infoWindowRef.current?.open(mapInstance.current!, marker);
+                    return;
+                }
+
+                const service = new google.maps.places.PlacesService(mapInstance.current!);
+                service.getDetails(
+                    {
+                        placeId: poi.placeId,
+                        fields: ["name", "formatted_address", "rating", "photos", "url"],
+                    },
+                    (place, status) => {
+                        if (status === google.maps.places.PlacesServiceStatus.OK && place) {
+                            const photoUrl =
+                                place.photos && place.photos.length > 0
+                                    ? place.photos[0].getUrl({ maxWidth: 300, maxHeight: 200 })
+                                    : null;
+
+                            const content = `
+                                <div style="max-width:300px">
+                                    <h3 style="margin:0;font-size:16px;font-weight:bold;">${place.name}</h3>
+                                    <p style="margin:4px 0;">📍 ${place.formatted_address || "No address"}</p>
+                                    <p style="margin:4px 0;">⭐ Rating: ${place.rating || "N/A"}</p>
+                                    ${photoUrl ? `<img src="${photoUrl}" alt="${place.name}" style="width:100%;border-radius:8px;margin-top:6px;" />` : ""}
+                                    ${place.url ? `<p style="margin-top:6px;"><a href="${place.url}" target="_blank" style="color:blue">View on Google Maps</a></p>` : ""}
+                                </div>
+                            `;
+
+                            infoWindowRef.current?.setContent(content);
+                            infoWindowRef.current?.open(mapInstance.current!, marker);
+                        } else {
+                            infoWindowRef.current?.setContent(`<div><strong>${poi.name}</strong><p>Details unavailable</p></div>`);
+                            infoWindowRef.current?.open(mapInstance.current!, marker);
+                        }
+                    }
+                );
+            });
+
             markersRef.current.push(marker);
         });
 
-        if (pois.length < 2) {
-            directionsRenderer.current.setDirections({ routes: [] } as any); // no route
-            return;
+        // Auto-center map
+        if (pois.length > 0) {
+            const bounds = new google.maps.LatLngBounds();
+            pois.forEach((p) => bounds.extend({ lat: p.lat, lng: p.lng }));
+            mapInstance.current.fitBounds(bounds);
         }
-
-        // Build route
-        const waypoints = pois.slice(1, -1).map((p) => ({
-            location: { lat: p.lat, lng: p.lng },
-            stopover: true,
-        }));
-
-        directionsService.current.route(
-            {
-                origin: { lat: pois[0].lat, lng: pois[0].lng },
-                destination: { lat: pois[pois.length - 1].lat, lng: pois[pois.length - 1].lng },
-                waypoints,
-                travelMode: google.maps.TravelMode.DRIVING,
-            },
-            (result, status) => {
-                if (status === google.maps.DirectionsStatus.OK && result) {
-                    directionsRenderer.current?.setDirections(result);
-
-                    // ✅ Auto fit map to route bounds
-                    mapInstance.current?.fitBounds(result.routes[0].bounds);
-                } else {
-                    console.error("Directions failed:", status);
-                }
-            }
-        );
     }, [pois]);
 
-    return <div ref={mapRef} className={className ?? "w-full h-full"} />;
+    return <div ref={mapRef} className="w-full h-full" />;
 }

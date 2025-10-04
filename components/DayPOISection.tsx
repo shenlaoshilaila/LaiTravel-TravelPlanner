@@ -172,10 +172,18 @@ export default function DayPOISection({
                 <div className="mt-2">
                     <SearchPOI
                         city={city}
-                        onPick={(poi: POI) =>
+                        onPick={(poi: any) =>
                             onUpdatePois(day, [
                                 ...initialPois,
-                                { ...poi, sequence: initialPois.length + 1 },
+                                {
+                                    name: poi.name,
+                                    lat: poi.geometry?.location?.lat(),
+                                    lng: poi.geometry?.location?.lng(),
+                                    placeId: poi.place_id, // ✅ capture the Google Place ID
+                                    sequence: initialPois.length + 1,
+                                    day,
+                                    city,
+                                } as POI,
                             ])
                         }
                         placeholder="Search POI..."
