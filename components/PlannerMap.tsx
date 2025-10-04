@@ -4,9 +4,10 @@ import { POI } from "@/components/types";
 
 interface PlannerMapProps {
     pois: POI[];
+    city?: string; // ✅ allow passing city
 }
 
-export default function PlannerMap({ pois }: PlannerMapProps) {
+export default function PlannerMap({ pois, city }: PlannerMapProps) {
     const mapRef = useRef<HTMLDivElement | null>(null);
     const mapInstance = useRef<google.maps.Map | null>(null);
     const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
@@ -17,7 +18,7 @@ export default function PlannerMap({ pois }: PlannerMapProps) {
 
         if (!mapInstance.current) {
             mapInstance.current = new google.maps.Map(mapRef.current, {
-                center: { lat: 39.9042, lng: 116.4074 }, // Beijing default
+                center: { lat: 39.9042, lng: 116.4074 }, // default Beijing
                 zoom: 12,
             });
             infoWindowRef.current = new google.maps.InfoWindow();
@@ -33,42 +34,50 @@ export default function PlannerMap({ pois }: PlannerMapProps) {
         markersRef.current.forEach((m) => m.setMap(null));
         markersRef.current = [];
 
-        pois.forEach((poi) => {
-            if (!poi.lat || !poi.lng || isNaN(poi.lat) || isNaN(poi.lng)) {
-                console.error("❌ Skipping invalid POI:", poi);
-                return;
-            }
-
-            console.log("✅ Adding marker:", poi);
-
-            const marker = new google.maps.Marker({
-                position: { lat: poi.lat, lng: poi.lng },
-                map: mapInstance.current!,
-                title: poi.name,
-            });
-
-            markersRef.current.push(marker);
-
-            // Simple InfoWindow for now
-            marker.addListener("click", () => {
-                infoWindowRef.current?.setContent(
-                    `<div><strong>${poi.name}</strong><br/>Lat: ${poi.lat}, Lng: ${poi.lng}</div>`
-                );
-                infoWindowRef.current?.open(mapInstance.current!, marker);
-            });
-        });
-
-        // Auto-center
         if (pois.length > 0) {
+            // --- Add markers for POIs ---
             const bounds = new google.maps.LatLngBounds();
-            pois.forEach((p) => {
-                if (!isNaN(p.lat) && !isNaN(p.lng)) {
-                    bounds.extend({ lat: p.lat, lng: p.lng });
+
+            pois.forEach((poi) => {
+                if (!poi.lat || !poi.lng || isNaN(poi.lat) || isNaN(poi.lng)) {
+                    console.error("❌ Skipping invalid POI:", poi);
+                    return;
+                }
+
+                const marker = new google.maps.Marker({
+                    position: { lat: poi.lat, lng: poi.lng },
+                    map: mapInstance.current!,
+                    title: poi.name,
+                });
+
+                markersRef.current.push(marker);
+
+                marker.addListener("click", () => {
+                    infoWindowRef.current?.setContent(
+                        `<div><strong>${poi.name}</strong><br/>Lat: ${poi.lat}, Lng: ${poi.lng}</div>`
+                    );
+                    infoWindowRef.current?.open(mapInstance.current!, marker);
+                });
+
+                bounds.extend({ lat: poi.lat, lng: poi.lng });
+            });
+
+            mapInstance.current.fitBounds(bounds);
+        } else if (city) {
+            // --- No POIs yet: center map on city ---
+            console.log("🌍 Geocoding city:", city);
+
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ address: city }, (results, status) => {
+                if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
+                    mapInstance.current!.setCenter(results[0].geometry.location);
+                    mapInstance.current!.setZoom(12);
+                } else {
+                    console.warn("❌ Geocode failed for city:", status);
                 }
             });
-            mapInstance.current.fitBounds(bounds);
         }
-    }, [pois]);
+    }, [pois, city]);
 
     return <div ref={mapRef} className="w-full h-full" />;
 }
