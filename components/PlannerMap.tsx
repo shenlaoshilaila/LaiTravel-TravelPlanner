@@ -32,6 +32,16 @@ export default function PlannerMap({ pois }: PlannerMapProps) {
         markersRef.current = [];
 
         pois.forEach((poi) => {
+            if (
+                typeof poi.lat !== "number" ||
+                typeof poi.lng !== "number" ||
+                isNaN(poi.lat) ||
+                isNaN(poi.lng)
+            ) {
+                console.error("❌ Skipping invalid POI (lat/lng not number):", poi);
+                return;
+            }
+
             const marker = new google.maps.Marker({
                 position: { lat: poi.lat, lng: poi.lng },
                 map: mapInstance.current!,
@@ -41,7 +51,9 @@ export default function PlannerMap({ pois }: PlannerMapProps) {
             // --- Handle Click: fetch details by placeId ---
             marker.addListener("click", () => {
                 if (!poi.placeId) {
-                    infoWindowRef.current?.setContent(`<div><strong>${poi.name}</strong><p>No details available.</p></div>`);
+                    infoWindowRef.current?.setContent(
+                        `<div><strong>${poi.name}</strong><p>No details available.</p></div>`
+                    );
                     infoWindowRef.current?.open(mapInstance.current!, marker);
                     return;
                 }
@@ -72,7 +84,9 @@ export default function PlannerMap({ pois }: PlannerMapProps) {
                             infoWindowRef.current?.setContent(content);
                             infoWindowRef.current?.open(mapInstance.current!, marker);
                         } else {
-                            infoWindowRef.current?.setContent(`<div><strong>${poi.name}</strong><p>Details unavailable</p></div>`);
+                            infoWindowRef.current?.setContent(
+                                `<div><strong>${poi.name}</strong><p>Details unavailable</p></div>`
+                            );
                             infoWindowRef.current?.open(mapInstance.current!, marker);
                         }
                     }
@@ -85,7 +99,11 @@ export default function PlannerMap({ pois }: PlannerMapProps) {
         // Auto-center map
         if (pois.length > 0) {
             const bounds = new google.maps.LatLngBounds();
-            pois.forEach((p) => bounds.extend({ lat: p.lat, lng: p.lng }));
+            pois.forEach((p) => {
+                if (!isNaN(p.lat) && !isNaN(p.lng)) {
+                    bounds.extend({ lat: p.lat, lng: p.lng });
+                }
+            });
             mapInstance.current.fitBounds(bounds);
         }
     }, [pois]);

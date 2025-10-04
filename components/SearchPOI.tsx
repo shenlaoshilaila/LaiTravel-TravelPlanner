@@ -82,9 +82,16 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                         className="cursor-pointer p-2 border rounded hover:bg-gray-100"
                         onClick={() => {
                             if (p.geometry?.location) {
-                                // ✅ Always coerce to number safely
-                                const lat = Number(p.geometry.location.lat());
-                                const lng = Number(p.geometry.location.lng());
+                                const latVal = typeof p.geometry.location.lat === "function"
+                                    ? p.geometry.location.lat()
+                                    : p.geometry.location.lat;
+
+                                const lngVal = typeof p.geometry.location.lng === "function"
+                                    ? p.geometry.location.lng()
+                                    : p.geometry.location.lng;
+
+                                const lat = Number(latVal);
+                                const lng = Number(lngVal);
 
                                 if (!isNaN(lat) && !isNaN(lng)) {
                                     onPick({
@@ -93,11 +100,11 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                                         lng,
                                         sequence: 0,
                                         day: 0,
-                                        placeId: p.place_id ?? "", // ✅ always include
-                                        city: p.formatted_address ?? "",
+                                        placeId: p.place_id ?? "",
+                                        city: p.formatted_address ?? ""
                                     });
                                 } else {
-                                    console.error("Invalid lat/lng for place:", p);
+                                    console.error("❌ Invalid lat/lng for place:", p);
                                 }
                             }
 
