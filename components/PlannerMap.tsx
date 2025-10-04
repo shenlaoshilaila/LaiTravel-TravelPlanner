@@ -60,27 +60,26 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
 
             mapInstance.current.fitBounds(bounds);
         }
+    }, [pois]);
 
-        // ✅ Always geocode the city if it's set
-        if (city) {
-            const geocoder = new google.maps.Geocoder();
-            geocoder.geocode({ address: city }, (results, status) => {
-                if (
-                    status === google.maps.GeocoderStatus.OK &&
-                    results &&
-                    results[0]
-                ) {
-                    mapInstance.current!.setCenter(results[0].geometry.location);
-                    if (pois.length === 0) {
-                        // Only zoom if no POIs yet
-                        mapInstance.current!.setZoom(12);
-                    }
-                } else {
-                    console.warn("❌ Geocode failed:", status);
+    // ✅ New effect: Always re-center when city changes
+    useEffect(() => {
+        if (!mapInstance.current || !city) return;
+
+        const geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ address: city }, (results, status) => {
+            if (status === google.maps.GeocoderStatus.OK && results?.[0]) {
+                mapInstance.current!.setCenter(results[0].geometry.location);
+
+                // Only zoom in if there are no POIs yet
+                if (!pois || pois.length === 0) {
+                    mapInstance.current!.setZoom(13);
                 }
-            });
-        }
-    }, [pois, city]); // ✅ react to city change
+            } else {
+                console.warn("❌ Geocode failed:", status);
+            }
+        });
+    }, [city]);
 
     return <div ref={mapRef} className="w-full h-full" />;
 }
