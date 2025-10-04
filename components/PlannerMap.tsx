@@ -4,7 +4,7 @@ import { POI } from "@/components/types";
 
 interface PlannerMapProps {
     pois: POI[];
-    city?: string; // ✅ allow passing city
+    city?: string; // ✅ now always watch city input
 }
 
 export default function PlannerMap({ pois, city }: PlannerMapProps) {
@@ -28,14 +28,11 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
     useEffect(() => {
         if (!mapInstance.current) return;
 
-        console.log("📌 POIs received by PlannerMap:", pois);
-
-        // Clear old markers
+        // clear old markers
         markersRef.current.forEach((m) => m.setMap(null));
         markersRef.current = [];
 
         if (pois.length > 0) {
-            // --- Add markers for POIs ---
             const bounds = new google.maps.LatLngBounds();
 
             pois.forEach((poi) => {
@@ -50,8 +47,6 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
                     title: poi.name,
                 });
 
-                markersRef.current.push(marker);
-
                 marker.addListener("click", () => {
                     infoWindowRef.current?.setContent(
                         `<div><strong>${poi.name}</strong><br/>Lat: ${poi.lat}, Lng: ${poi.lng}</div>`
@@ -59,25 +54,24 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
                     infoWindowRef.current?.open(mapInstance.current!, marker);
                 });
 
+                markersRef.current.push(marker);
                 bounds.extend({ lat: poi.lat, lng: poi.lng });
             });
 
             mapInstance.current.fitBounds(bounds);
         } else if (city) {
-            // --- No POIs yet: center map on city ---
-            console.log("🌍 Geocoding city:", city);
-
+            // ✅ Always geocode city when provided (even without POIs)
             const geocoder = new google.maps.Geocoder();
             geocoder.geocode({ address: city }, (results, status) => {
                 if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
                     mapInstance.current!.setCenter(results[0].geometry.location);
                     mapInstance.current!.setZoom(12);
                 } else {
-                    console.warn("❌ Geocode failed for city:", status);
+                    console.warn("❌ Geocode failed:", status);
                 }
             });
         }
-    }, [pois, city]);
+    }, [pois, city]); // ✅ depend on city too
 
     return <div ref={mapRef} className="w-full h-full" />;
 }
