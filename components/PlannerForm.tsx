@@ -21,9 +21,11 @@ export default function PlannerForm({
         if (autocompleteRef.current) {
             const place = autocompleteRef.current.getPlace();
 
-            // ✅ Use only the city "name" (short clean string) instead of full formatted_address
-            if (place.name) {
-                onCityChange(place.name); // e.g. "New York"
+            // ✅ Prefer formatted_address for full "City, Region, Country"
+            if (place.formatted_address) {
+                onCityChange(place.formatted_address);
+            } else if (place.name) {
+                onCityChange(place.name);
             }
         }
     };

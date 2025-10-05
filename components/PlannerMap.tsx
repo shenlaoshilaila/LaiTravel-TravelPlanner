@@ -13,22 +13,24 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
     const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
     const markersRef = useRef<google.maps.Marker[]>([]);
 
+    // 🗺️ Initialize map once
     useEffect(() => {
         if (!mapRef.current || !(window as any).google) return;
 
         if (!mapInstance.current) {
             mapInstance.current = new google.maps.Map(mapRef.current, {
-                center: { lat: 39.9042, lng: 116.4074 }, // default Beijing
-                zoom: 12,
+                center: { lat: 39.9042, lng: 116.4074 }, // Default: Beijing
+                zoom: 10,
             });
             infoWindowRef.current = new google.maps.InfoWindow();
         }
     }, []);
 
+    // 📍 Update markers when POIs change
     useEffect(() => {
         if (!mapInstance.current) return;
 
-        // Clear markers
+        // Clear old markers
         markersRef.current.forEach((m) => m.setMap(null));
         markersRef.current = [];
 
@@ -37,7 +39,7 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
 
             pois.forEach((poi) => {
                 if (!poi.lat || !poi.lng || isNaN(poi.lat) || isNaN(poi.lng)) {
-                    console.error("❌ Skipping invalid POI:", poi);
+                    console.error("Skipping invalid POI:", poi);
                     return;
                 }
 
@@ -62,19 +64,17 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
         }
     }, [pois]);
 
-    // ✅ New effect: Always re-center when city changes
+    // 🧭 Center map when city changes
     useEffect(() => {
         if (!mapInstance.current || !city) return;
 
         const geocoder = new google.maps.Geocoder();
         geocoder.geocode({ address: city }, (results, status) => {
-            if (status === google.maps.GeocoderStatus.OK && results?.[0]) {
-                mapInstance.current!.setCenter(results[0].geometry.location);
-
-                // Only zoom in if there are no POIs yet
-                if (!pois || pois.length === 0) {
-                    mapInstance.current!.setZoom(13);
-                }
+            if (status === "OK" && results?.[0]) {
+                const location = results[0].geometry.location;
+                mapInstance.current!.panTo(location);
+                mapInstance.current!.setZoom(12);
+                console.log("✅ Map centered on:", city);
             } else {
                 console.warn("❌ Geocode failed:", status);
             }
