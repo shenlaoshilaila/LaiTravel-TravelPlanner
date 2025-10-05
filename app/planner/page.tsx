@@ -15,59 +15,52 @@ type User = { id: string; name?: string } | null;
 export default function PlannerPage() {
     const router = useRouter();
 
+    // ------------------ STATE ------------------
     const [startDate, setStartDate] = useState<string>("");
     const [endDate, setEndDate] = useState<string>("");
     const [dayPOIs, setDayPOIs] = useState<DayPOI[]>([]);
     const [selectedDay, setSelectedDay] = useState<number | null>(1);
     const [user, setUser] = useState<User>(null);
-
     const [detectedDates, setDetectedDates] = useState<
         { start: string; end: string }[]
     >([]);
 
-    // --- Resizable Split Pane state ---
+    // --- Resizable Split Pane ---
     const [leftWidth, setLeftWidth] = useState(50);
     const handleDrag = (e: MouseEvent) => {
         const newWidth = (e.clientX / window.innerWidth) * 100;
-        if (newWidth > 20 && newWidth < 80) {
-            setLeftWidth(newWidth);
-        }
+        if (newWidth > 20 && newWidth < 80) setLeftWidth(newWidth);
     };
-
     const startDrag = (e: React.MouseEvent) => {
         e.preventDefault();
         window.addEventListener("mousemove", handleDrag);
         window.addEventListener("mouseup", stopDrag);
     };
-
     const stopDrag = () => {
         window.removeEventListener("mousemove", handleDrag);
         window.removeEventListener("mouseup", stopDrag);
     };
 
-    // 🔐 Fetch current user
+    // ------------------ AUTH ------------------
     useEffect(() => {
         (async () => {
             try {
                 const r = await fetch(`${BACKEND_URL}/auth/me`, {
                     credentials: "include",
                 });
-                if (r.ok) {
-                    setUser(await r.json());
-                }
+                if (r.ok) setUser(await r.json());
             } catch (e) {
                 console.warn("Auth error", e);
             }
         })();
     }, []);
 
-    // 🗓️ Generate days when startDate & endDate are selected
+    // ------------------ DATE HANDLING ------------------
     useEffect(() => {
         if (!startDate || !endDate) return;
         const start = new Date(startDate);
         const end = new Date(endDate);
-
-        if (start > end) return; // invalid range
+        if (start > end) return;
 
         const newDays: DayPOI[] = [];
         let dayCount = 1;
@@ -84,14 +77,16 @@ export default function PlannerPage() {
         setSelectedDay(1);
     }, [startDate, endDate]);
 
-    // ✅ Update city for a day
+    // ------------------ HANDLERS ------------------
+
+    // ✅ City change per day
     const handleCityChange = (day: number, city: string) => {
         setDayPOIs((prev) =>
             prev.map((d) => (d.day === day ? { ...d, city } : d))
         );
     };
 
-    // ✅ Update POIs for a day
+    // ✅ Update POIs per day (when user picks a POI)
     const updatePOIsForDay = (day: number, newPois: POI[]) => {
         setDayPOIs((prev) =>
             prev.map((d) =>
@@ -102,6 +97,7 @@ export default function PlannerPage() {
         );
     };
 
+    // ✅ Combine all POIs for saving
     const allPois = useMemo(
         () =>
             dayPOIs.flatMap((d) =>
@@ -116,13 +112,13 @@ export default function PlannerPage() {
         [dayPOIs]
     );
 
+    // ✅ Current day's POIs & city
     const currentDayPois =
         selectedDay ? dayPOIs.find((d) => d.day === selectedDay)?.pois ?? [] : [];
-
-    // 🟩 NEW: Get selected day’s city
     const currentCity =
         selectedDay ? dayPOIs.find((d) => d.day === selectedDay)?.city ?? "" : "";
 
+    // ------------------ RENDER ------------------
     return (
         <main className="flex flex-col max-w-full h-screen">
             {/* Header */}
@@ -145,7 +141,7 @@ export default function PlannerPage() {
                 />
             </div>
 
-            {/* Split Pane */}
+            {/* Main Split Layout */}
             <div className="flex flex-1 w-full">
                 {/* LEFT: Planner Controls */}
                 <div
@@ -159,9 +155,7 @@ export default function PlannerPage() {
                     {/* Date Range Input */}
                     <div className="flex gap-4 mb-6">
                         <div>
-                            <label className="block text-sm font-medium mb-1">
-                                Start Date
-                            </label>
+                            <label className="block text-sm font-medium mb-1">Start Date</label>
                             <input
                                 type="date"
                                 value={startDate}
@@ -170,9 +164,7 @@ export default function PlannerPage() {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium mb-1">
-                                End Date
-                            </label>
+                            <label className="block text-sm font-medium mb-1">End Date</label>
                             <input
                                 type="date"
                                 value={endDate}
@@ -235,7 +227,7 @@ export default function PlannerPage() {
                     style={{ flexGrow: 1, width: `${100 - leftWidth}%`, minWidth: "20%" }}
                 >
                     <div className="h-full w-full border rounded shadow">
-                        {/* 🟩 Pass selected city down to map */}
+                        {/* ✅ The map updates to show current day's city + POIs */}
                         <PlannerMap city={currentCity} pois={currentDayPois} />
                     </div>
                 </div>
