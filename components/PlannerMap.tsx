@@ -17,18 +17,19 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
 
     const [selectedPlace, setSelectedPlace] = useState<any>(null);
 
+    // ✅ Initialize map
     useEffect(() => {
         if (!mapRef.current || !(window as any).google) return;
 
         if (!mapInstance.current) {
             mapInstance.current = new google.maps.Map(mapRef.current, {
-                center: { lat: 39.9042, lng: 116.4074 },
+                center: { lat: 39.9042, lng: 116.4074 }, // default Beijing
                 zoom: 12,
             });
         }
     }, []);
 
-    // Center map when city changes
+    // ✅ Center map when city changes
     useEffect(() => {
         if (!mapInstance.current || !city) return;
         const geocoder = new google.maps.Geocoder();
@@ -42,26 +43,22 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
         });
     }, [city]);
 
-    // Update pins and route
+    // ✅ Update pins and draw routes
     useEffect(() => {
         if (!mapInstance.current) return;
 
-        // Clear markers
+        // Clear previous markers and routes
         markersRef.current.forEach((m) => m.setMap(null));
         markersRef.current = [];
-
-        // Clear previous route
         if (directionsRendererRef.current) {
             directionsRendererRef.current.setMap(null);
             directionsRendererRef.current = null;
         }
 
-        // Add markers
         const bounds = new google.maps.LatLngBounds();
-        const placesService = new google.maps.places.PlacesService(
-            mapInstance.current!
-        );
+        const placesService = new google.maps.places.PlacesService(mapInstance.current!);
 
+        // Add markers
         pois.forEach((poi) => {
             if (!poi.lat || !poi.lng) return;
             const marker = new google.maps.Marker({
@@ -70,13 +67,19 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
                 title: poi.name,
             });
 
+            // 🟩 On click, fetch detailed info
             marker.addListener("click", () => {
-                // Fetch detailed info for the place
-                if (poi.placeId) {
+                if (poi.place_id) {
                     placesService.getDetails(
-                        { placeId: poi.placeId, fields: ["name", "rating", "formatted_address", "photos", "url"] },
+                        {
+                            placeId: poi.place_id,
+                            fields: ["name", "rating", "formatted_address", "photos", "url"],
+                        },
                         (place, status) => {
-                            if (status === google.maps.places.PlacesServiceStatus.OK && place) {
+                            if (
+                                status === google.maps.places.PlacesServiceStatus.OK &&
+                                place
+                            ) {
                                 setSelectedPlace(place);
                             } else {
                                 setSelectedPlace({
@@ -102,7 +105,7 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
             mapInstance.current.fitBounds(bounds);
         }
 
-        // Draw route
+        // 🟦 Draw route between POIs
         if (pois.length >= 2) {
             const directionsService = new google.maps.DirectionsService();
             const directionsRenderer = new google.maps.DirectionsRenderer({
@@ -123,7 +126,10 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
             directionsService.route(
                 {
                     origin: { lat: pois[0].lat, lng: pois[0].lng },
-                    destination: { lat: pois[pois.length - 1].lat, lng: pois[pois.length - 1].lng },
+                    destination: {
+                        lat: pois[pois.length - 1].lat,
+                        lng: pois[pois.length - 1].lng,
+                    },
                     waypoints,
                     travelMode: google.maps.TravelMode.DRIVING,
                 },
