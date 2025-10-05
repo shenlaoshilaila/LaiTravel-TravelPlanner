@@ -122,12 +122,12 @@ export default function PlannerPage() {
     return (
         <main className="flex flex-col max-w-full h-screen">
             {/* Header */}
-            <header className="p-4 border-b">
+            <header className="p-4 border-b bg-blue-50">
                 <h1 className="text-2xl font-bold">Itinerary Planner</h1>
             </header>
 
             {/* Flight Date Extractor */}
-            <div className="p-4 border-b">
+            <div className="p-4 border-b bg-white">
                 <FlightDateExtractor
                     onSelect={(start, end) => {
                         setStartDate(start);
@@ -145,7 +145,7 @@ export default function PlannerPage() {
             <div className="flex flex-1 w-full">
                 {/* LEFT: Planner Controls */}
                 <div
-                    className="p-4 overflow-y-auto"
+                    className="p-4 overflow-y-auto bg-gray-50"
                     style={{
                         width: `${leftWidth}%`,
                         minWidth: "20%",
@@ -155,7 +155,9 @@ export default function PlannerPage() {
                     {/* Date Range Input */}
                     <div className="flex gap-4 mb-6">
                         <div>
-                            <label className="block text-sm font-medium mb-1">Start Date</label>
+                            <label className="block text-sm font-medium mb-1">
+                                Start Date
+                            </label>
                             <input
                                 type="date"
                                 value={startDate}
