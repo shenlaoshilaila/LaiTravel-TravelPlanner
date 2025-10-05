@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import { POI } from "./types";
 
 interface SearchPOIProps {
@@ -12,104 +12,68 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
     const [query, setQuery] = useState("");
     const [results, setResults] = useState<google.maps.places.PlaceResult[]>([]);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const mapRef = useRef<HTMLDivElement | null>(null);
-    const serviceRef = useRef<google.maps.places.PlacesService | null>(null);
-
-    // Initialize PlacesService
-    useEffect(() => {
-        if (mapRef.current && !serviceRef.current && (window as any).google) {
-            const dummyMap = new google.maps.Map(mapRef.current);
-            serviceRef.current = new google.maps.places.PlacesService(dummyMap);
-        }
-    }, []);
 
     const handleSearch = () => {
-        if (!query) return;
-        if (!serviceRef.current) {
-            setError("Google Maps API not loaded yet.");
-            return;
-        }
-
+        if (!query || !(window as any).google) return;
         setLoading(true);
-        setError(null);
-        setResults([]);
 
-        const text = city ? `${query}, ${city}` : query;
+        const service = new google.maps.places.PlacesService(document.createElement("div"));
+        const request = { query: `${query} in ${city}`, fields: ["name", "geometry"] };
 
-        serviceRef.current.textSearch({ query: text }, (places, status) => {
+        service.textSearch(request, (res, status) => {
             setLoading(false);
-
-            if (status === google.maps.places.PlacesServiceStatus.OK && places && places.length > 0) {
-                console.log("✅ Places found:", places);
-                setResults(places);
+            if (status === "OK" && res) {
+                setResults(res);
             } else {
-                console.warn("❌ Places search failed:", status);
-                setError("No results found.");
+                setResults([]);
             }
         });
     };
 
+    const handlePick = (place: google.maps.places.PlaceResult) => {
+        if (!place.geometry?.location) return;
+
+        const poi: POI = {
+            name: place.name || "Unnamed Place",
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng(),
+        };
+        onPick(poi);
+        setQuery("");
+        setResults([]);
+    };
+
     return (
         <div>
-            {/* hidden map container for PlacesService */}
-            <div ref={mapRef} style={{ display: "none" }} />
-
-            <div className="flex gap-2 mt-2">
+            <div className="flex gap-2">
                 <input
-                    type="text"
-                    placeholder={placeholder ?? "Search places..."}
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    className="border px-2 py-1 rounded w-full"
+                    placeholder={placeholder || "Search POI..."}
+                    className="border px-2 py-1 flex-1 rounded"
                 />
                 <button
                     type="button"
                     onClick={handleSearch}
-                    disabled={!query || loading}
-                    className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 disabled:opacity-50"
+                    disabled={loading}
+                    className="bg-blue-400 text-white px-3 rounded"
                 >
-                    {loading ? "Searching…" : "Search"}
+                    Search
                 </button>
             </div>
 
-            {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
-
-            <ul className="mt-2 space-y-2">
-                {results.map((p, i) => (
-                    <li
+            {/* Display results */}
+            <div className="mt-2 space-y-1">
+                {results.map((r, i) => (
+                    <div
                         key={i}
-                        className="cursor-pointer p-2 border rounded hover:bg-gray-100"
-                        onClick={() => {
-                            if (p.geometry?.location) {
-                                const lat = Number(p.geometry.location.lat());
-                                const lng = Number(p.geometry.location.lng());
-                                console.log("📍 Picked POI:", { name: p.name, lat, lng, placeId: p.place_id });
-
-                                onPick({
-                                    name: p.name ?? "Unknown",
-                                    lat,
-                                    lng,
-                                    sequence: 0,
-                                    day: 0,
-                                    placeId: p.place_id ?? "",
-                                    city: p.formatted_address ?? "",
-                                });
-                            } else {
-                                console.error("❌ No geometry for:", p);
-                            }
-
-                            // Clear dropdown + input
-                            setQuery("");
-                            setResults([]);
-                        }}
+                        className="border p-2 rounded cursor-pointer hover:bg-gray-100"
+                        onClick={() => handlePick(r)}
                     >
-                        <div className="font-medium">{p.name}</div>
-                        <div className="text-sm text-gray-600">{p.formatted_address ?? ""}</div>
-                    </li>
+                        {r.name}
+                    </div>
                 ))}
-            </ul>
+            </div>
         </div>
     );
 }

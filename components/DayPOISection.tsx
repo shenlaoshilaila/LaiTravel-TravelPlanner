@@ -172,20 +172,18 @@ export default function DayPOISection({
                 <div className="mt-2">
                     <SearchPOI
                         city={city}
-                        onPick={(poi: any) =>
-                            onUpdatePois(day, [
-                                ...initialPois,
-                                {
-                                    name: poi.name,
-                                    lat: poi.geometry?.location?.lat(),
-                                    lng: poi.geometry?.location?.lng(),
-                                    placeId: poi.place_id, // ✅ capture the Google Place ID
-                                    sequence: initialPois.length + 1,
-                                    day,
-                                    city,
-                                } as POI,
-                            ])
-                        }
+                        onPick={(poi: POI) => {
+                            // ✅ Make sure we have lat/lng
+                            const newPOI: POI = {
+                                name: poi.name,
+                                lat: poi.lat,
+                                lng: poi.lng,
+                                sequence: initialPois.length + 1,
+                                day,
+                                city,
+                            };
+                            onUpdatePois(day, [...initialPois, newPOI]);
+                        }}
                         placeholder="Search POI..."
                     />
                 </div>
@@ -202,7 +200,7 @@ export default function DayPOISection({
                         >
                             {initialPois.map((poi: POI, i: number) => (
                                 <Draggable
-                                    key={i.toString()}
+                                    key={`${poi.name}-${i}`}
                                     draggableId={`poi-${day}-${i}`}
                                     index={i}
                                 >
@@ -213,9 +211,9 @@ export default function DayPOISection({
                                             {...provided.dragHandleProps}
                                             className="flex justify-between items-center p-2 border rounded bg-white shadow-sm"
                                         >
-                                            <span>
-                                                {i + 1}. {poi.name}
-                                            </span>
+                      <span>
+                        {i + 1}. {poi.name}
+                      </span>
                                             <button
                                                 onClick={() => handleDeletePOI(i)}
                                                 className="text-red-500 hover:text-red-700 text-sm"

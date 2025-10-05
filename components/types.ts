@@ -5,8 +5,8 @@ export interface POI {
     name: string;
     lat: number;
     lng: number;
-    sequence: number;
-    day: number;
+    sequence?: number;
+    day?: number;
     city?: string;
     date?: string; // ✅ optional support for date-based itineraries
     placeId?: string; // ✅ NEW: Google Places API unique ID
