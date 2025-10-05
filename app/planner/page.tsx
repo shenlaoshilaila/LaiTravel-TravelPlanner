@@ -1,245 +1,81 @@
 "use client";
-import React, { useEffect, useState, useMemo } from "react";
-import DayPOISection from "@/components/DayPOISection";
-import PlannerMap from "@/components/PlannerMap";
-import SavePlanButton from "@/components/SavePlanButton";
+import React, { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import { POI, DayPOI } from "@/components/types";
-import { useRouter } from "next/navigation";
-import AIChatBar from "@/components/AIChatBar";
-import FlightDateExtractor from "@/components/FlightDateExtractor";
+import { groupPOIsByDay } from "@/components/utils/groupByDay";
+import PlannerMap from "@/components/PlannerMap";
 
-const BACKEND_URL = "https://travelplanner-720040112489.us-east1.run.app";
+const API_BASE = "https://travelplanner-720040112489.us-east1.run.app";
 
-type User = { id: string; name?: string } | null;
+export default function ItineraryPage() {
+    const { id } = useParams();
+    const [plan, setPlan] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
 
-export default function PlannerPage() {
-    const router = useRouter();
-
-    // ------------------ STATE ------------------
-    const [startDate, setStartDate] = useState<string>("");
-    const [endDate, setEndDate] = useState<string>("");
-    const [dayPOIs, setDayPOIs] = useState<DayPOI[]>([]);
-    const [selectedDay, setSelectedDay] = useState<number | null>(1);
-    const [user, setUser] = useState<User>(null);
-    const [detectedDates, setDetectedDates] = useState<
-        { start: string; end: string }[]
-    >([]);
-
-    // --- Resizable Split Pane ---
-    const [leftWidth, setLeftWidth] = useState(50);
-    const handleDrag = (e: MouseEvent) => {
-        const newWidth = (e.clientX / window.innerWidth) * 100;
-        if (newWidth > 20 && newWidth < 80) setLeftWidth(newWidth);
-    };
-    const startDrag = (e: React.MouseEvent) => {
-        e.preventDefault();
-        window.addEventListener("mousemove", handleDrag);
-        window.addEventListener("mouseup", stopDrag);
-    };
-    const stopDrag = () => {
-        window.removeEventListener("mousemove", handleDrag);
-        window.removeEventListener("mouseup", stopDrag);
-    };
-
-    // ------------------ AUTH ------------------
     useEffect(() => {
+        if (!id) return;
         (async () => {
             try {
-                const r = await fetch(`${BACKEND_URL}/auth/me`, {
-                    credentials: "include",
-                });
-                if (r.ok) setUser(await r.json());
+                const res = await fetch(`${API_BASE}/itinerary/${id}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setPlan(data);
+                }
             } catch (e) {
-                console.warn("Auth error", e);
+                console.error("Fetch itinerary failed:", e);
+            } finally {
+                setLoading(false);
             }
         })();
-    }, []);
+    }, [id]);
 
-    // ------------------ DATE HANDLING ------------------
-    useEffect(() => {
-        if (!startDate || !endDate) return;
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        if (start > end) return;
+    if (loading) return <p className="p-6">Loading itinerary...</p>;
+    if (!plan) return <p className="p-6">Itinerary not found</p>;
 
-        const newDays: DayPOI[] = [];
-        let dayCount = 1;
-        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-            newDays.push({
-                day: dayCount,
-                date: d.toISOString().split("T")[0],
-                city: "",
-                pois: [],
-            } as any);
-            dayCount++;
-        }
-        setDayPOIs(newDays);
-        setSelectedDay(1);
-    }, [startDate, endDate]);
+    // ✅ Convert Map → DayPOI[]
+    const grouped = groupPOIsByDay(plan.pois);
+    const byDay: DayPOI[] = Array.from(grouped.entries()).map(([day, pois]) => ({
+        day,
+        city: pois[0]?.city ?? "",
+        date: pois[0]?.date ?? "",
+        pois,
+    }));
 
-    // ------------------ HANDLERS ------------------
-
-    // ✅ City change per day
-    const handleCityChange = (day: number, city: string) => {
-        setDayPOIs((prev) =>
-            prev.map((d) => (d.day === day ? { ...d, city } : d))
-        );
-    };
-
-    // ✅ Update POIs per day (when user picks a POI)
-    const updatePOIsForDay = (day: number, newPois: POI[]) => {
-        setDayPOIs((prev) =>
-            prev.map((d) =>
-                d.day === day
-                    ? { ...d, pois: newPois.map((p, i) => ({ ...p, sequence: i + 1 })) }
-                    : d
-            )
-        );
-    };
-
-    // ✅ Combine all POIs for saving
-    const allPois = useMemo(
-        () =>
-            dayPOIs.flatMap((d) =>
-                d.pois.map((poi, i) => ({
-                    ...poi,
-                    city: d.city,
-                    day: d.day,
-                    date: d.date,
-                    sequence: i + 1,
-                }))
-            ),
-        [dayPOIs]
-    );
-
-    // ✅ Current day's POIs & city
-    const currentDayPois =
-        selectedDay ? dayPOIs.find((d) => d.day === selectedDay)?.pois ?? [] : [];
-    const currentCity =
-        selectedDay ? dayPOIs.find((d) => d.day === selectedDay)?.city ?? "" : "";
-
-    // ------------------ RENDER ------------------
     return (
-        <main className="flex flex-col max-w-full h-screen">
-            {/* Header */}
-            <header className="p-4 border-b">
-                <h1 className="text-2xl font-bold">Itinerary Planner</h1>
-            </header>
+        <div className="max-w-4xl mx-auto p-6 space-y-6">
+            <h1 className="text-2xl font-bold mb-4">{plan.city || "Itinerary"}</h1>
 
-            {/* Flight Date Extractor */}
-            <div className="p-4 border-b">
-                <FlightDateExtractor
-                    onSelect={(start, end) => {
-                        setStartDate(start);
-                        setEndDate(end);
-                    }}
-                    onReset={() => {
-                        setStartDate("");
-                        setEndDate("");
-                        setDetectedDates([]);
-                    }}
-                />
-            </div>
-
-            {/* Main Split Layout */}
-            <div className="flex flex-1 w-full">
-                {/* LEFT: Planner Controls */}
+            {byDay.map(({ day, city, date, pois }) => (
                 <div
-                    className="p-4 overflow-y-auto"
-                    style={{
-                        width: `${leftWidth}%`,
-                        minWidth: "20%",
-                        maxHeight: "calc(100vh - 160px)",
-                    }}
+                    key={day}
+                    className="border rounded-lg p-4 bg-white shadow-sm space-y-2"
                 >
-                    {/* Date Range Input */}
-                    <div className="flex gap-4 mb-6">
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Start Date</label>
-                            <input
-                                type="date"
-                                value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
-                                className="border px-3 py-2 rounded"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1">End Date</label>
-                            <input
-                                type="date"
-                                value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
-                                className="border px-3 py-2 rounded"
-                            />
-                        </div>
-                    </div>
+                    <h2 className="font-semibold text-lg">
+                        Day {day} — {city || "No city selected"}
+                    </h2>
+                    <p className="text-sm text-gray-500">
+                        {date ? new Date(date).toDateString() : ""}
+                    </p>
 
-                    {/* Per-Day Sections */}
-                    <div className="space-y-6">
-                        {dayPOIs.map(({ day, date, city, pois }) => (
-                            <DayPOISection
-                                key={day}
-                                day={day}
-                                date={date ?? ""}
-                                city={city ?? ""}
-                                initialPois={pois}
-                                onUpdatePois={updatePOIsForDay}
-                                onSelectDay={setSelectedDay}
-                                onCityChange={handleCityChange}
-                                isActive={selectedDay === day}
-                                backendUrl={BACKEND_URL}
-                            />
+                    <ul className="list-disc pl-5">
+                        {pois.map((poi: POI, i: number) => (
+                            <li key={i}>
+                                {poi.name}{" "}
+                                <span className="text-gray-500 text-sm">
+                  ({poi.lat?.toFixed(3)}, {poi.lng?.toFixed(3)})
+                </span>
+                            </li>
                         ))}
-                    </div>
+                    </ul>
 
-                    {/* Save Button */}
-                    <div className="mt-6">
-                        {user ? (
-                            <SavePlanButton
-                                planData={{ startDate, endDate, pois: allPois }}
-                                onPlanSaved={(saved) => {
-                                    const id =
-                                        (saved as any)?.plan?.id ?? (saved as any)?.id;
-                                    if (id) router.push(`/planner/${id}`);
-                                }}
-                                backendUrl={BACKEND_URL}
-                            />
-                        ) : (
-                            <button
-                                disabled
-                                className="px-4 py-2 bg-gray-300 text-gray-600 rounded cursor-not-allowed"
-                            >
-                                Login to Save
-                            </button>
-                        )}
-                    </div>
+                    {/* Optional map per day */}
+                    {pois.length > 0 && (
+                        <div className="h-64 mt-2 border rounded">
+                            <PlannerMap city={city} pois={pois} />
+                        </div>
+                    )}
                 </div>
-
-                {/* DRAG HANDLE */}
-                <div
-                    onMouseDown={startDrag}
-                    className="w-2 bg-gray-300 cursor-col-resize hover:bg-gray-400"
-                />
-
-                {/* RIGHT: Map */}
-                <div
-                    className="p-4"
-                    style={{ flexGrow: 1, width: `${100 - leftWidth}%`, minWidth: "20%" }}
-                >
-                    <div className="h-full w-full border rounded shadow">
-                        {/* ✅ The map updates to show current day's city + POIs */}
-                        <PlannerMap city={currentCity} pois={currentDayPois} />
-                    </div>
-                </div>
-            </div>
-
-            {/* Floating AI Assistant */}
-            <AIChatBar
-                city=""
-                days={dayPOIs.length}
-                selectedDay={selectedDay}
-                dayPOIs={dayPOIs}
-            />
-        </main>
+            ))}
+        </div>
     );
 }
