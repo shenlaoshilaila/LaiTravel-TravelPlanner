@@ -1,18 +1,17 @@
-import { POI, DayPOI } from "../types"; // adjust path if needed
+import { POI } from "@/components/types";
 
-export function groupPOIsByDay(pois: POI[]): DayPOI[] {
+export function groupByDay(pois: POI[]) {
     const map = new Map<number, POI[]>();
 
     for (const poi of pois) {
+        // ✅ Skip invalid / undefined day values
+        if (poi.day === undefined) continue;
+
         if (!map.has(poi.day)) {
             map.set(poi.day, []);
         }
         map.get(poi.day)!.push(poi);
     }
 
-    const grouped: DayPOI[] = Array.from(map.entries())
-        .sort(([a], [b]) => a - b)
-        .map(([day, pois]) => ({ day, pois }));
-
-    return grouped;
+    return map;
 }
