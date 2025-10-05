@@ -25,7 +25,7 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
 
         service.textSearch(request, (res, status) => {
             setLoading(false);
-            if (status === "OK" && res) {
+            if (status === google.maps.places.PlacesServiceStatus.OK && res) {
                 setResults(res);
             } else {
                 setResults([]);
@@ -40,7 +40,7 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
             name: place.name || "Unnamed Place",
             lat: place.geometry.location.lat(),
             lng: place.geometry.location.lng(),
-            place_id: place.place_id ?? "", // ✅ fixed: use `place_id`
+            place_id: place.place_id || undefined, // ✅ now stored
         };
 
         onPick(poi);
@@ -61,13 +61,13 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                     type="button"
                     onClick={handleSearch}
                     disabled={loading}
-                    className="bg-blue-400 text-white px-3 rounded"
+                    className="bg-blue-500 text-white px-3 rounded"
                 >
-                    Search
+                    {loading ? "..." : "Search"}
                 </button>
             </div>
 
-            {/* Display results */}
+            {/* Search Results */}
             <div className="mt-2 space-y-1">
                 {results.map((r, i) => (
                     <div
@@ -75,7 +75,10 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                         className="border p-2 rounded cursor-pointer hover:bg-gray-100"
                         onClick={() => handlePick(r)}
                     >
-                        {r.name}
+                        <p className="font-medium">{r.name}</p>
+                        <p className="text-sm text-gray-500">
+                            {r.formatted_address || "No address available"}
+                        </p>
                     </div>
                 ))}
             </div>
