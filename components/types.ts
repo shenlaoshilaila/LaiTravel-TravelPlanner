@@ -8,23 +8,27 @@ export interface POI {
     sequence?: number;
     day?: number;
     city?: string;
-    date?: string; // optional per-day date (yyyy-mm-dd)
-    place_id?: string; // ✅ Google Places API unique ID (correct key name)
+    date?: string;        // optional per-day date (yyyy-mm-dd)
+    place_id?: string;    // ✅ Google Places API unique ID (correct key name)
+    address?: string;     // ✅ formatted address (for info window)
+    rating?: number;      // ✅ optional Google rating (0–5)
+    photoUrl?: string;    // ✅ first photo URL (from Places API)
+    url?: string;         // ✅ direct link to Google Maps listing
 }
 
 // ✅ A day's worth of POIs
 export interface DayPOI {
     day: number;
-    date?: string; // optional per-day date (yyyy-mm-dd)
+    date?: string;        // optional per-day date (yyyy-mm-dd)
     city?: string;
     pois: POI[];
 }
 
 // ✅ When saving, plan can be based on "days" OR a date range
 export interface PlanData {
-    days?: number;      // optional (for simple day count itineraries)
-    startDate?: string; // optional (yyyy-mm-dd)
-    endDate?: string;   // optional (yyyy-mm-dd)
+    days?: number;        // optional (for simple day count itineraries)
+    startDate?: string;   // optional (yyyy-mm-dd)
+    endDate?: string;     // optional (yyyy-mm-dd)
     pois: DayPOI[] | POI[];
 }
 

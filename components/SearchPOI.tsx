@@ -18,14 +18,11 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
         setLoading(true);
 
         const service = new google.maps.places.PlacesService(document.createElement("div"));
-        const request = {
-            query: `${query} in ${city}`,
-            fields: ["name", "geometry", "place_id", "formatted_address"],
-        };
+        const request = { query: `${query} in ${city}`, fields: ["name", "geometry", "formatted_address", "rating", "photos", "place_id", "url"] };
 
-        service.textSearch(request, async (res, status) => {
+        service.textSearch(request, (res, status) => {
             setLoading(false);
-            if (status === google.maps.places.PlacesServiceStatus.OK && res) {
+            if (status === "OK" && res) {
                 setResults(res);
             } else {
                 setResults([]);
@@ -34,41 +31,23 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
     };
 
     const handlePick = (place: google.maps.places.PlaceResult) => {
-        if (!place.geometry?.location) return;
+        const location = place.geometry?.location;
+        if (!location) return; // ✅ Safeguard undefined geometry/location
 
-        // Immediately get more details
-        const detailsService = new google.maps.places.PlacesService(document.createElement("div"));
-        detailsService.getDetails(
-            {
-                placeId: place.place_id!,
-                fields: ["name", "geometry", "formatted_address", "rating", "photos", "url"],
-            },
-            (detailed, status) => {
-                if (status === google.maps.places.PlacesServiceStatus.OK && detailed) {
-                    const poi: POI = {
-                        name: detailed.name || "Unnamed Place",
-                        lat: detailed.geometry?.location?.lat() ?? 0,
-                        lng: detailed.geometry?.location?.lng() ?? 0,
-                        place_id: detailed.place_id,
-                        address: detailed.formatted_address,
-                        rating: detailed.rating,
-                        photoUrl: detailed.photos?.[0]?.getUrl({ maxWidth: 400 }),
-                        url: detailed.url,
-                    };
-                    onPick(poi);
-                } else {
-                    const poi: POI = {
-                        name: place.name || "Unnamed Place",
-                        lat: place.geometry.location.lat(),
-                        lng: place.geometry.location.lng(),
-                        place_id: place.place_id,
-                    };
-                    onPick(poi);
-                }
-                setQuery("");
-                setResults([]);
-            }
-        );
+        const poi: POI = {
+            name: place.name || "Unnamed Place",
+            lat: location.lat(),
+            lng: location.lng(),
+            place_id: place.place_id,
+            address: place.formatted_address,
+            rating: place.rating,
+            photoUrl: place.photos?.[0]?.getUrl({ maxWidth: 400 }),
+            url: place.url,
+        };
+
+        onPick(poi);
+        setQuery("");
+        setResults([]);
     };
 
     return (
@@ -84,13 +63,13 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                     type="button"
                     onClick={handleSearch}
                     disabled={loading}
-                    className="bg-blue-500 text-white px-3 rounded"
+                    className="bg-blue-400 text-white px-3 rounded"
                 >
-                    {loading ? "..." : "Search"}
+                    {loading ? "Loading..." : "Search"}
                 </button>
             </div>
 
-            {/* Display search results */}
+            {/* Results */}
             <div className="mt-2 space-y-1">
                 {results.map((r, i) => (
                     <div
@@ -98,10 +77,7 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                         className="border p-2 rounded cursor-pointer hover:bg-gray-100"
                         onClick={() => handlePick(r)}
                     >
-                        <p className="font-medium">{r.name}</p>
-                        <p className="text-sm text-gray-500">
-                            {r.formatted_address || "No address available"}
-                        </p>
+                        {r.name}
                     </div>
                 ))}
             </div>
