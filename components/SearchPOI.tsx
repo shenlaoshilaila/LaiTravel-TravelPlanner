@@ -34,7 +34,7 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
         });
     };
 
-    // 📍 Handle POI click → fetch full details
+    // 📍 Handle POI click → fetch full details (with reverse geocode fallback)
     const handlePick = (place: google.maps.places.PlaceResult) => {
         const service = new google.maps.places.PlacesService(document.createElement("div"));
 
@@ -55,30 +55,51 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
             },
             (detailed, status) => {
                 if (status === google.maps.places.PlacesServiceStatus.OK && detailed) {
-                    const poi: POI = {
-                        name: detailed.name || "Unnamed Place",
-                        lat: detailed.geometry?.location?.lat() ?? 0,
-                        lng: detailed.geometry?.location?.lng() ?? 0,
-                        place_id: detailed.place_id,
-                        address:
+                    const location = detailed.geometry?.location;
+
+                    // 🧭 If address missing, fall back to reverse geocoding
+                    if (!detailed.formatted_address && location) {
+                        const geocoder = new google.maps.Geocoder();
+                        geocoder.geocode({ location }, (geoResults, geoStatus) => {
+                            const fallbackAddress =
+                                geoStatus === "OK" && geoResults?.length
+                                    ? geoResults[0].formatted_address
+                                    : "Address unavailable";
+
+                            buildPOI(detailed, fallbackAddress);
+                        });
+                    } else {
+                        const addr =
                             detailed.formatted_address ||
                             detailed.vicinity ||
                             (detailed.address_components
                                 ? detailed.address_components.map((c) => c.long_name).join(", ")
-                                : "Address unavailable"),
-                        rating: detailed.rating,
-                        photoUrl: detailed.photos?.[0]?.getUrl({ maxWidth: 400 }),
-                        url: detailed.url,
-                    };
-
-                    onPick(poi);
-                    setQuery("");
-                    setResults([]);
+                                : "Address unavailable");
+                        buildPOI(detailed, addr);
+                    }
                 } else {
                     console.warn("getDetails failed:", status);
                 }
             }
         );
+
+        // 🧩 Helper to finalize POI object
+        function buildPOI(detailed: google.maps.places.PlaceResult, address: string) {
+            const poi: POI = {
+                name: detailed.name || "Unnamed Place",
+                lat: detailed.geometry?.location?.lat() ?? 0,
+                lng: detailed.geometry?.location?.lng() ?? 0,
+                place_id: detailed.place_id,
+                address,
+                rating: detailed.rating,
+                photoUrl: detailed.photos?.[0]?.getUrl({ maxWidth: 400 }),
+                url: detailed.url,
+            };
+
+            onPick(poi);
+            setQuery("");
+            setResults([]);
+        }
     };
 
     return (
