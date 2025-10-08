@@ -11,7 +11,9 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
     const mapRef = useRef<HTMLDivElement | null>(null);
     const mapInstance = useRef<google.maps.Map | null>(null);
     const markersRef = useRef<google.maps.Marker[]>([]);
-    const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
+    const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(
+        null
+    );
 
     const [selectedPlace, setSelectedPlace] = useState<any>(null);
 
@@ -21,8 +23,11 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
 
         if (!mapInstance.current) {
             mapInstance.current = new google.maps.Map(mapRef.current, {
-                center: { lat: 39.9042, lng: 116.4074 }, // default Beijing
+                center: { lat: 39.9042, lng: 116.4074 }, // Default: Beijing
                 zoom: 12,
+                mapTypeControl: false,
+                streetViewControl: false,
+                fullscreenControl: false,
             });
         }
     }, []);
@@ -41,13 +46,13 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
         });
     }, [city]);
 
-    // ✅ Update pins & draw route
+    // ✅ Update pins and routes
     useEffect(() => {
         if (!mapInstance.current) return;
 
-        // Clear markers and routes
         markersRef.current.forEach((m) => m.setMap(null));
         markersRef.current = [];
+
         if (directionsRendererRef.current) {
             directionsRendererRef.current.setMap(null);
             directionsRendererRef.current = null;
@@ -65,7 +70,6 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
                 title: poi.name,
             });
 
-            // 🟩 On marker click — show details
             marker.addListener("click", () => {
                 if (poi.place_id) {
                     placesService.getDetails(
@@ -77,13 +81,15 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
                                 "formatted_address",
                                 "photos",
                                 "url",
-                                "website",
-                                "formatted_phone_number",
-                                "opening_hours"
+                                "reviews",
+                                "opening_hours",
                             ],
                         },
                         (place, status) => {
-                            if (status === google.maps.places.PlacesServiceStatus.OK && place) {
+                            if (
+                                status === google.maps.places.PlacesServiceStatus.OK &&
+                                place
+                            ) {
                                 setSelectedPlace(place);
                             } else {
                                 setSelectedPlace({
@@ -109,15 +115,12 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
             mapInstance.current.fitBounds(bounds);
         }
 
-        // 🟦 Draw route between POIs
+        // 🛣️ Draw route
         if (pois.length >= 2) {
             const directionsService = new google.maps.DirectionsService();
             const directionsRenderer = new google.maps.DirectionsRenderer({
                 suppressMarkers: true,
-                polylineOptions: {
-                    strokeColor: "#0078FF",
-                    strokeWeight: 4,
-                },
+                polylineOptions: { strokeColor: "#0078FF", strokeWeight: 4 },
             });
             directionsRenderer.setMap(mapInstance.current!);
             directionsRendererRef.current = directionsRenderer;
@@ -140,8 +143,6 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
                 (result, status) => {
                     if (status === "OK" && result) {
                         directionsRenderer.setDirections(result);
-                    } else {
-                        console.warn("Route failed:", status);
                     }
                 }
             );
@@ -149,19 +150,18 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
     }, [pois]);
 
     return (
-        <div className="relative w-full h-full">
-            <div ref={mapRef} className="w-full h-full rounded" />
+        <div className="relative w-full h-full flex">
+            {/* 🗺️ Map on left */}
+            <div ref={mapRef} className="flex-grow h-full rounded" />
 
-            {/* 🟩 Info Panel */}
+            {/* 🟦 Slide-in info panel */}
             {selectedPlace && (
-                <div className="absolute top-4 right-4 bg-white shadow-2xl rounded-xl p-4 w-96 border border-gray-200">
-                    <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-bold text-lg text-gray-900">
-                            {selectedPlace.name}
-                        </h3>
+                <div className="w-96 h-full bg-white shadow-2xl border-l absolute right-0 top-0 flex flex-col overflow-y-auto z-20 animate-slideIn">
+                    <div className="p-4 border-b flex justify-between items-center">
+                        <h2 className="font-bold text-lg">{selectedPlace.name}</h2>
                         <button
                             onClick={() => setSelectedPlace(null)}
-                            className="text-gray-400 hover:text-gray-600"
+                            className="text-gray-500 hover:text-gray-700 text-xl"
                         >
                             ✕
                         </button>
@@ -169,58 +169,52 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
 
                     {selectedPlace.photos?.[0] && (
                         <img
-                            src={selectedPlace.photos[0].getUrl({ maxWidth: 350 })}
+                            src={selectedPlace.photos[0].getUrl({ maxWidth: 600 })}
                             alt={selectedPlace.name}
-                            className="rounded-lg mb-3"
+                            className="w-full h-56 object-cover"
                         />
                     )}
 
-                    {selectedPlace.rating && (
-                        <p className="text-yellow-600 font-semibold mb-1">
-                            ⭐ {selectedPlace.rating.toFixed(1)} / 5
+                    <div className="p-4 space-y-2">
+                        <p className="text-gray-700 text-sm">
+                            📍 {selectedPlace.formatted_address ?? "No address available"}
                         </p>
-                    )}
 
-                    <p className="text-gray-700 text-sm mb-2">
-                        📍 {selectedPlace.formatted_address || "Address not available"}
-                    </p>
+                        {selectedPlace.rating && (
+                            <p className="text-yellow-600 font-medium">
+                                ⭐ {selectedPlace.rating.toFixed(1)} / 5
+                            </p>
+                        )}
 
-                    {selectedPlace.formatted_phone_number && (
-                        <p className="text-sm text-gray-700 mb-1">
-                            📞 {selectedPlace.formatted_phone_number}
-                        </p>
-                    )}
+                        {selectedPlace.opening_hours && (
+                            <p className="text-sm text-gray-600">
+                                🕒 {selectedPlace.opening_hours.weekday_text?.join(", ")}
+                            </p>
+                        )}
 
-                    {selectedPlace.website && (
-                        <a
-                            href={selectedPlace.website}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline text-sm block mb-1"
-                        >
-                            🌐 Visit Website
-                        </a>
-                    )}
+                        {selectedPlace.url && (
+                            <a
+                                href={selectedPlace.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline text-sm"
+                            >
+                                View on Google Maps →
+                            </a>
+                        )}
 
-                    {selectedPlace.opening_hours?.weekday_text && (
-                        <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2 rounded">
-                            <p className="font-semibold mb-1">🕒 Opening Hours</p>
-                            {selectedPlace.opening_hours.weekday_text.map((line: string, i: number) => (
-                                <p key={i}>{line}</p>
-                            ))}
-                        </div>
-                    )}
-
-                    {selectedPlace.url && (
-                        <a
-                            href={selectedPlace.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline text-sm mt-2 inline-block"
-                        >
-                            View on Google Maps →
-                        </a>
-                    )}
+                        {selectedPlace.reviews?.length > 0 && (
+                            <div className="mt-4">
+                                <h4 className="font-semibold mb-2">Top review:</h4>
+                                <p className="text-gray-600 text-sm italic">
+                                    “{selectedPlace.reviews[0].text}”
+                                </p>
+                                <p className="text-gray-500 text-xs mt-1">
+                                    — {selectedPlace.reviews[0].author_name}
+                                </p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
         </div>
