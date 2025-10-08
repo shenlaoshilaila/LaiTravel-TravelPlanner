@@ -13,6 +13,7 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
     const [results, setResults] = useState<google.maps.places.PlaceResult[]>([]);
     const [loading, setLoading] = useState(false);
 
+    // 🔍 Handle text search
     const handleSearch = () => {
         if (!query || !(window as any).google) return;
         setLoading(true);
@@ -20,7 +21,7 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
         const service = new google.maps.places.PlacesService(document.createElement("div"));
         const request = {
             query: `${query} in ${city}`,
-            fields: ["name", "geometry", "place_id"], // keep lightweight for search
+            fields: ["name", "geometry", "place_id"],
         };
 
         service.textSearch(request, (res, status) => {
@@ -33,6 +34,7 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
         });
     };
 
+    // 📍 Handle POI click → fetch full details
     const handlePick = (place: google.maps.places.PlaceResult) => {
         const service = new google.maps.places.PlacesService(document.createElement("div"));
 
@@ -42,6 +44,8 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                 fields: [
                     "name",
                     "formatted_address",
+                    "address_components",
+                    "vicinity",
                     "geometry",
                     "rating",
                     "photos",
@@ -56,7 +60,12 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                         lat: detailed.geometry?.location?.lat() ?? 0,
                         lng: detailed.geometry?.location?.lng() ?? 0,
                         place_id: detailed.place_id,
-                        address: detailed.formatted_address || "Address unavailable",
+                        address:
+                            detailed.formatted_address ||
+                            detailed.vicinity ||
+                            (detailed.address_components
+                                ? detailed.address_components.map((c) => c.long_name).join(", ")
+                                : "Address unavailable"),
                         rating: detailed.rating,
                         photoUrl: detailed.photos?.[0]?.getUrl({ maxWidth: 400 }),
                         url: detailed.url,
@@ -74,6 +83,7 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
 
     return (
         <div>
+            {/* 🔍 Search input */}
             <div className="flex gap-2">
                 <input
                     value={query}
@@ -91,7 +101,7 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                 </button>
             </div>
 
-            {/* Results */}
+            {/* 🧭 Results list */}
             <div className="mt-2 space-y-1">
                 {results.map((r, i) => (
                     <div
