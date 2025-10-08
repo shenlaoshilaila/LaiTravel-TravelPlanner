@@ -18,11 +18,14 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
         setLoading(true);
 
         const service = new google.maps.places.PlacesService(document.createElement("div"));
-        const request = { query: `${query} in ${city}`, fields: ["name", "geometry", "formatted_address", "rating", "photos", "place_id", "url"] };
+        const request = {
+            query: `${query} in ${city}`,
+            fields: ["name", "geometry", "place_id"], // keep lightweight for search
+        };
 
         service.textSearch(request, (res, status) => {
             setLoading(false);
-            if (status === "OK" && res) {
+            if (status === google.maps.places.PlacesServiceStatus.OK && res) {
                 setResults(res);
             } else {
                 setResults([]);
@@ -31,23 +34,42 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
     };
 
     const handlePick = (place: google.maps.places.PlaceResult) => {
-        const location = place.geometry?.location;
-        if (!location) return; // ✅ Safeguard undefined geometry/location
+        const service = new google.maps.places.PlacesService(document.createElement("div"));
 
-        const poi: POI = {
-            name: place.name || "Unnamed Place",
-            lat: location.lat(),
-            lng: location.lng(),
-            place_id: place.place_id,
-            address: place.formatted_address,
-            rating: place.rating,
-            photoUrl: place.photos?.[0]?.getUrl({ maxWidth: 400 }),
-            url: place.url,
-        };
+        service.getDetails(
+            {
+                placeId: place.place_id!,
+                fields: [
+                    "name",
+                    "formatted_address",
+                    "geometry",
+                    "rating",
+                    "photos",
+                    "url",
+                    "place_id",
+                ],
+            },
+            (detailed, status) => {
+                if (status === google.maps.places.PlacesServiceStatus.OK && detailed) {
+                    const poi: POI = {
+                        name: detailed.name || "Unnamed Place",
+                        lat: detailed.geometry?.location?.lat() ?? 0,
+                        lng: detailed.geometry?.location?.lng() ?? 0,
+                        place_id: detailed.place_id,
+                        address: detailed.formatted_address || "Address unavailable",
+                        rating: detailed.rating,
+                        photoUrl: detailed.photos?.[0]?.getUrl({ maxWidth: 400 }),
+                        url: detailed.url,
+                    };
 
-        onPick(poi);
-        setQuery("");
-        setResults([]);
+                    onPick(poi);
+                    setQuery("");
+                    setResults([]);
+                } else {
+                    console.warn("getDetails failed:", status);
+                }
+            }
+        );
     };
 
     return (
@@ -63,7 +85,7 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                     type="button"
                     onClick={handleSearch}
                     disabled={loading}
-                    className="bg-blue-400 text-white px-3 rounded"
+                    className="bg-blue-500 text-white px-3 rounded hover:bg-blue-600 transition"
                 >
                     {loading ? "Loading..." : "Search"}
                 </button>
