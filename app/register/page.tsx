@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+const BACKEND_URL =
+    process.env.NEXT_PUBLIC_API_BASE ?? "https://travelplanner-720040112489.us-east1.run.app";
+
 export default function RegisterPage() {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
@@ -24,10 +27,11 @@ export default function RegisterPage() {
         setError("");
 
         try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/register`, {
+            const res = await fetch(`${BACKEND_URL}/auth/register`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ username, password }),
+                credentials: "include",
             });
 
             if (!res.ok) {
@@ -35,7 +39,6 @@ export default function RegisterPage() {
                 throw new Error(msg || "Registration failed");
             }
 
-            // Registration successful - redirect to login
             router.push("/login?message=Registration successful. Please login.");
         } catch (err: any) {
             setError(err.message || "Registration failed");
