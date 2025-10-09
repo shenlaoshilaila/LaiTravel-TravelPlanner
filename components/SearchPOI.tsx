@@ -36,13 +36,22 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
             fields: ["name", "geometry", "place_id", "formatted_address", "vicinity"],
         };
 
-        console.log("Searching for:", request.query);
+        console.log("🔍 Search request:", request.query);
 
         service.textSearch(request, (res, status) => {
             setLoading(false);
-            console.log("Search status:", status, "Results:", res);
+            console.log("🔍 Search response - Status:", status, "Results:", res);
 
             if (status === google.maps.places.PlacesServiceStatus.OK && res) {
+                // Log address availability in search results
+                res.forEach((result, index) => {
+                    console.log(`📍 Result ${index}:`, {
+                        name: result.name,
+                        formatted_address: result.formatted_address,
+                        vicinity: result.vicinity,
+                        place_id: result.place_id
+                    });
+                });
                 setResults(res);
             } else {
                 setError(`Search failed: ${status}`);
@@ -52,61 +61,87 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
     };
 
     // 📍 Handle POI click → fetch full details
-    const handlePick = async (place: google.maps.places.PlaceResult) => {
-        console.log("Picked place:", place);
+    const handlePick = (place: google.maps.places.PlaceResult) => {
+        console.log("🎯 Picked place basic info:", {
+            name: place.name,
+            formatted_address: place.formatted_address,
+            vicinity: place.vicinity,
+            place_id: place.place_id
+        });
+
         setLoading(true);
         setError("");
 
-        try {
-            const service = new google.maps.places.PlacesService(document.createElement("div"));
+        const service = new google.maps.places.PlacesService(document.createElement("div"));
 
-            // First try to get detailed place information
-            service.getDetails(
-                {
-                    placeId: place.place_id!,
-                    fields: ["name", "formatted_address", "vicinity", "geometry", "place_id"],
-                },
-                (detailed, status) => {
-                    setLoading(false);
-                    console.log("GetDetails status:", status, "Detailed:", detailed);
+        service.getDetails(
+            {
+                placeId: place.place_id!,
+                fields: [
+                    "name",
+                    "formatted_address",
+                    "vicinity",
+                    "geometry",
+                    "place_id",
+                    "rating",
+                    "photos",
+                    "url"
+                ],
+            },
+            (detailed, status) => {
+                setLoading(false);
+                console.log("📋 GetDetails response - Status:", status, "Full details:", detailed);
 
-                    if (status === google.maps.places.PlacesServiceStatus.OK && detailed) {
-                        let finalAddress = detailed.formatted_address || detailed.vicinity;
+                if (status === google.maps.places.PlacesServiceStatus.OK && detailed) {
+                    console.log("✅ GetDetails SUCCESS - Address data:", {
+                        formatted_address: detailed.formatted_address,
+                        vicinity: detailed.vicinity,
+                        has_geometry: !!detailed.geometry?.location
+                    });
 
-                        // If still no address, try reverse geocoding
-                        if (!finalAddress && detailed.geometry?.location) {
-                            reverseGeocode(detailed.geometry.location, (address) => {
-                                buildPOI(detailed, address);
-                            });
-                        } else {
-                            buildPOI(detailed, finalAddress || "Address unavailable");
-                        }
+                    const location = detailed.geometry?.location;
+                    let finalAddress = detailed.formatted_address || detailed.vicinity;
+
+                    if (finalAddress) {
+                        console.log("✅ Using address from getDetails:", finalAddress);
+                        buildPOI(detailed, finalAddress);
+                    } else if (location) {
+                        console.log("🔄 No address in getDetails, attempting reverse geocoding...");
+                        reverseGeocode(location, (address) => {
+                            buildPOI(detailed, address);
+                        });
                     } else {
-                        // Fallback: use original place data
-                        console.warn("getDetails failed, using original place data");
-                        buildPOI(
-                            place,
-                            place.formatted_address || place.vicinity || "Address unavailable"
-                        );
+                        console.log("❌ No address and no coordinates available");
+                        buildPOI(detailed, "Address unavailable");
                     }
+                } else {
+                    console.warn("❌ getDetails FAILED:", status);
+                    console.log("🔄 Falling back to original place data:", {
+                        formatted_address: place.formatted_address,
+                        vicinity: place.vicinity
+                    });
+
+                    const fallbackAddress = place.formatted_address || place.vicinity || "Address unavailable";
+                    buildPOI(place, fallbackAddress);
                 }
-            );
-        } catch (err) {
-            setLoading(false);
-            console.error("Error in handlePick:", err);
-            setError("Failed to get place details");
-        }
+            }
+        );
     };
 
     // 🗺️ Reverse geocode as fallback
     const reverseGeocode = (location: google.maps.LatLng, callback: (address: string) => void) => {
         const geocoder = new google.maps.Geocoder();
+        console.log("🗺️ Reverse geocoding coordinates:", location.lat(), location.lng());
+
         geocoder.geocode({ location }, (results, status) => {
-            console.log("Reverse geocode status:", status, "Results:", results);
+            console.log("🗺️ Reverse geocode response - Status:", status, "Results:", results);
 
             if (status === "OK" && results && results.length > 0) {
-                callback(results[0].formatted_address);
+                const address = results[0].formatted_address;
+                console.log("✅ Reverse geocode SUCCESS:", address);
+                callback(address);
             } else {
+                console.log("❌ Reverse geocode FAILED");
                 callback("Address unavailable");
             }
         });
@@ -121,13 +156,15 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
             lat: location?.lat() ?? 0,
             lng: location?.lng() ?? 0,
             place_id: place.place_id,
-            address: address || "Address unavailable",
+            address: address,
             rating: place.rating,
             photoUrl: place.photos?.[0]?.getUrl?.({ maxWidth: 400 }),
             url: place.url,
         };
 
-        console.log("Final POI:", poi);
+        console.log("🎉 FINAL POI OBJECT TO PARENT:", poi);
+        console.log("📤 Calling onPick callback with POI...");
+
         onPick(poi);
         setQuery("");
         setResults([]);
@@ -178,7 +215,7 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                     >
                         <div className="font-medium text-gray-900">{result.name}</div>
                         <div className="text-sm text-gray-600 mt-1">
-                            {result.formatted_address || result.vicinity || "No address available"}
+                            {result.formatted_address || result.vicinity || "No address in search results"}
                         </div>
                         {result.place_id && (
                             <div className="text-xs text-gray-400 mt-1">ID: {result.place_id}</div>
