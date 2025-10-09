@@ -79,6 +79,16 @@ export default function DayPOISection({
                                       }: DayPOISectionProps) {
     const [distances, setDistances] = useState<DistanceInfo[]>([]);
 
+    // Debug: Log POI data to see what addresses are available
+    useEffect(() => {
+        console.log(`🔍 DayPOISection ${day} - POIs:`, initialPois.map(poi => ({
+            name: poi.name,
+            address: poi.address,
+            hasAddress: !!poi.address,
+            place_id: poi.place_id
+        })));
+    }, [initialPois, day]);
+
     // --- Calculate distance matrix ---
     useEffect(() => {
         if (initialPois.length < 2 || !(window as any).google) return;
@@ -173,15 +183,21 @@ export default function DayPOISection({
                     <SearchPOI
                         city={city}
                         onPick={(poi: POI) => {
-                            // ✅ Make sure we have lat/lng
+                            // ✅ Include ALL POI data including address
                             const newPOI: POI = {
                                 name: poi.name,
                                 lat: poi.lat,
                                 lng: poi.lng,
+                                place_id: poi.place_id,
+                                address: poi.address, // 🎯 Make sure address is included
+                                rating: poi.rating,
+                                photoUrl: poi.photoUrl,
+                                url: poi.url,
                                 sequence: initialPois.length + 1,
                                 day,
                                 city,
                             };
+                            console.log("🎯 Adding new POI with address:", newPOI.address);
                             onUpdatePois(day, [...initialPois, newPOI]);
                         }}
                         placeholder="Search POI..."
@@ -194,13 +210,13 @@ export default function DayPOISection({
                 <Droppable droppableId={`day-${day}`}>
                     {(provided) => (
                         <ul
-                            className="space-y-1 mt-2"
+                            className="space-y-2 mt-2"
                             {...provided.droppableProps}
                             ref={provided.innerRef}
                         >
                             {initialPois.map((poi: POI, i: number) => (
                                 <Draggable
-                                    key={`${poi.name}-${i}`}
+                                    key={`${poi.place_id || poi.name}-${i}`}
                                     draggableId={`poi-${day}-${i}`}
                                     index={i}
                                 >
@@ -209,14 +225,33 @@ export default function DayPOISection({
                                             ref={provided.innerRef}
                                             {...provided.draggableProps}
                                             {...provided.dragHandleProps}
-                                            className="flex justify-between items-center p-2 border rounded bg-white shadow-sm"
+                                            className="flex justify-between items-start p-3 border rounded bg-white shadow-sm"
                                         >
-                      <span>
-                        {i + 1}. {poi.name}
-                      </span>
+                                            <div className="flex-1">
+                                                <div className="font-medium">
+                                                    {i + 1}. {poi.name}
+                                                </div>
+                                                {/* 🎯 ADDED ADDRESS DISPLAY */}
+                                                <div className="text-sm text-gray-600 mt-1">
+                                                    {poi.address ? (
+                                                        <span className="text-green-700">{poi.address}</span>
+                                                    ) : (
+                                                        <span className="text-red-500">No address available</span>
+                                                    )}
+                                                </div>
+                                                {/* Debug info - only show in development */}
+                                                {process.env.NODE_ENV === 'development' && (
+                                                    <div className="text-xs text-gray-400 mt-1">
+                                                        ID: {poi.place_id} | Lat: {poi.lat?.toFixed(4)} | Lng: {poi.lng?.toFixed(4)}
+                                                    </div>
+                                                )}
+                                            </div>
                                             <button
-                                                onClick={() => handleDeletePOI(i)}
-                                                className="text-red-500 hover:text-red-700 text-sm"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeletePOI(i);
+                                                }}
+                                                className="text-red-500 hover:text-red-700 text-sm ml-2"
                                             >
                                                 ✕
                                             </button>
