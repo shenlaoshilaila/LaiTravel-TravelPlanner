@@ -21,7 +21,7 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
         const service = new google.maps.places.PlacesService(document.createElement("div"));
         const request = {
             query: `${query} in ${city}`,
-            fields: ["name", "geometry", "place_id"],
+            fields: ["name", "geometry", "place_id", "formatted_address", "vicinity"],
         };
 
         service.textSearch(request, (res, status) => {
@@ -56,29 +56,23 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
             (detailed, status) => {
                 if (status === google.maps.places.PlacesServiceStatus.OK && detailed) {
                     const location = detailed.geometry?.location;
+                    let address = detailed.formatted_address || detailed.vicinity;
 
                     // 🧭 If address missing, fall back to reverse geocoding
-                    if (!detailed.formatted_address && location) {
+                    if (!address && location) {
                         const geocoder = new google.maps.Geocoder();
                         geocoder.geocode({ location }, (geoResults, geoStatus) => {
-                            const fallbackAddress =
-                                geoStatus === "OK" && geoResults?.length
-                                    ? geoResults[0].formatted_address
-                                    : "Address unavailable";
-
-                            buildPOI(detailed, fallbackAddress);
+                            address = geoStatus === "OK" && geoResults?.length
+                                ? geoResults[0].formatted_address
+                                : "Address unavailable";
+                            buildPOI(detailed, address);
                         });
                     } else {
-                        const addr =
-                            detailed.formatted_address ||
-                            detailed.vicinity ||
-                            (detailed.address_components
-                                ? detailed.address_components.map((c) => c.long_name).join(", ")
-                                : "Address unavailable");
-                        buildPOI(detailed, addr);
+                        buildPOI(detailed, address || "Address unavailable");
                     }
                 } else {
-                    console.warn("getDetails failed:", status);
+                    // If getDetails fails completely, use original place data
+                    buildPOI(place, place.formatted_address || place.vicinity || "Address unavailable");
                 }
             }
         );
@@ -90,7 +84,7 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                 lat: detailed.geometry?.location?.lat() ?? 0,
                 lng: detailed.geometry?.location?.lng() ?? 0,
                 place_id: detailed.place_id,
-                address,
+                address: address || "Address unavailable",
                 rating: detailed.rating,
                 photoUrl: detailed.photos?.[0]?.getUrl({ maxWidth: 400 }),
                 url: detailed.url,
@@ -102,6 +96,13 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
         }
     };
 
+    // Handle Enter key press
+    const handleKeyPress = (e: React.KeyboardEvent) => {
+        if (e.key === "Enter") {
+            handleSearch();
+        }
+    };
+
     return (
         <div>
             {/* 🔍 Search input */}
@@ -109,6 +110,7 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                 <input
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
+                    onKeyPress={handleKeyPress}
                     placeholder={placeholder || "Search POI..."}
                     className="border px-2 py-1 flex-1 rounded"
                 />
@@ -116,7 +118,7 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                     type="button"
                     onClick={handleSearch}
                     disabled={loading}
-                    className="bg-blue-500 text-white px-3 rounded hover:bg-blue-600 transition"
+                    className="bg-blue-500 text-white px-3 rounded hover:bg-blue-600 transition disabled:bg-blue-300"
                 >
                     {loading ? "Loading..." : "Search"}
                 </button>
@@ -130,7 +132,10 @@ export default function SearchPOI({ city, onPick, placeholder }: SearchPOIProps)
                         className="border p-2 rounded cursor-pointer hover:bg-gray-100"
                         onClick={() => handlePick(r)}
                     >
-                        {r.name}
+                        <div className="font-medium">{r.name}</div>
+                        <div className="text-sm text-gray-600">
+                            {r.formatted_address || r.vicinity || "Address unavailable"}
+                        </div>
                     </div>
                 ))}
             </div>
