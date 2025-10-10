@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
+import Draggable from "react-draggable"; // 🧩 added
 import { POI } from "@/components/types";
 
 interface PlannerMapProps {
@@ -11,9 +12,7 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
     const mapRef = useRef<HTMLDivElement | null>(null);
     const mapInstance = useRef<google.maps.Map | null>(null);
     const markersRef = useRef<google.maps.Marker[]>([]);
-    const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(
-        null
-    );
+    const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
 
     const [selectedPlace, setSelectedPlace] = useState<any>(null);
 
@@ -70,6 +69,7 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
                 title: poi.name,
             });
 
+            // 🧭 Click marker → open POI detail
             marker.addListener("click", () => {
                 if (poi.place_id) {
                     placesService.getDetails(
@@ -151,71 +151,78 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
 
     return (
         <div className="relative w-full h-full flex">
-            {/* 🗺️ Map on left */}
+            {/* 🗺️ Map */}
             <div ref={mapRef} className="flex-grow h-full rounded" />
 
-            {/* 🟦 Slide-in info panel */}
+            {/* 🟦 Movable info panel */}
             {selectedPlace && (
-                <div className="w-96 h-full bg-white shadow-2xl border-l absolute right-0 top-0 flex flex-col overflow-y-auto z-20 animate-slideIn">
-                    <div className="p-4 border-b flex justify-between items-center">
-                        <h2 className="font-bold text-lg">{selectedPlace.name}</h2>
-                        <button
-                            onClick={() => setSelectedPlace(null)}
-                            className="text-gray-500 hover:text-gray-700 text-xl"
-                        >
-                            ✕
-                        </button>
-                    </div>
-
-                    {selectedPlace.photos?.[0] && (
-                        <img
-                            src={selectedPlace.photos[0].getUrl({ maxWidth: 600 })}
-                            alt={selectedPlace.name}
-                            className="w-full h-56 object-cover"
-                        />
-                    )}
-
-                    <div className="p-4 space-y-2">
-                        <p className="text-gray-700 text-sm">
-                            📍 {selectedPlace.formatted_address ?? "No address available"}
-                        </p>
-
-                        {selectedPlace.rating && (
-                            <p className="text-yellow-600 font-medium">
-                                ⭐ {selectedPlace.rating.toFixed(1)} / 5
-                            </p>
-                        )}
-
-                        {selectedPlace.opening_hours && (
-                            <p className="text-sm text-gray-600">
-                                🕒 {selectedPlace.opening_hours.weekday_text?.join(", ")}
-                            </p>
-                        )}
-
-                        {selectedPlace.url && (
-                            <a
-                                href={selectedPlace.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline text-sm"
+                <Draggable handle=".drag-handle" defaultPosition={{ x: 100, y: 100 }}>
+                    <div className="fixed bg-white shadow-2xl rounded-2xl w-96 overflow-hidden z-50 cursor-move border">
+                        {/* Header */}
+                        <div className="drag-handle flex justify-between items-center bg-gray-100 px-4 py-3 cursor-grab active:cursor-grabbing">
+                            <h2 className="font-bold text-lg text-gray-800">
+                                {selectedPlace.name}
+                            </h2>
+                            <button
+                                onClick={() => setSelectedPlace(null)}
+                                className="text-gray-500 hover:text-red-600 text-xl font-semibold"
                             >
-                                View on Google Maps →
-                            </a>
+                                ✕
+                            </button>
+                        </div>
+
+                        {/* Photo */}
+                        {selectedPlace.photos?.[0] && (
+                            <img
+                                src={selectedPlace.photos[0].getUrl({ maxWidth: 600 })}
+                                alt={selectedPlace.name}
+                                className="w-full h-56 object-cover"
+                            />
                         )}
 
-                        {selectedPlace.reviews?.length > 0 && (
-                            <div className="mt-4">
-                                <h4 className="font-semibold mb-2">Top review:</h4>
-                                <p className="text-gray-600 text-sm italic">
-                                    “{selectedPlace.reviews[0].text}”
+                        {/* Info */}
+                        <div className="p-4 space-y-2 text-gray-700">
+                            <p>
+                                📍{" "}
+                                {selectedPlace.formatted_address ?? "No address available"}
+                            </p>
+
+                            {selectedPlace.rating && (
+                                <p>⭐ {selectedPlace.rating.toFixed(1)} / 5</p>
+                            )}
+
+                            {selectedPlace.opening_hours && (
+                                <p>
+                                    🕒{" "}
+                                    {selectedPlace.opening_hours.weekday_text?.join(", ")}
                                 </p>
-                                <p className="text-gray-500 text-xs mt-1">
-                                    — {selectedPlace.reviews[0].author_name}
-                                </p>
-                            </div>
-                        )}
+                            )}
+
+                            {selectedPlace.url && (
+                                <a
+                                    href={selectedPlace.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline text-sm"
+                                >
+                                    View on Google Maps →
+                                </a>
+                            )}
+
+                            {selectedPlace.reviews?.length > 0 && (
+                                <div className="mt-4">
+                                    <h4 className="font-semibold mb-2">Top review:</h4>
+                                    <p className="text-gray-600 text-sm italic">
+                                        “{selectedPlace.reviews[0].text}”
+                                    </p>
+                                    <p className="text-gray-500 text-xs mt-1">
+                                        — {selectedPlace.reviews[0].author_name}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </div>
+                </Draggable>
             )}
         </div>
     );
