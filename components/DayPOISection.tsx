@@ -1,6 +1,6 @@
 "use client";
-import React, { useState } from "react";
-import SearchPOI from "@/components/SearchPOI";
+import React, { useEffect, useRef, useState } from "react";
+import SearchPOI from "./SearchPOI";
 import { POI } from "./types";
 
 interface DayPOISectionProps {
@@ -8,10 +8,10 @@ interface DayPOISectionProps {
     date: string;
     city: string;
     initialPois: POI[];
-    onUpdatePois: (day: number, pois: POI[]) => void;
-    onSelectDay: (day: number) => void;
-    onCityChange: (day: number, city: string) => void;
     isActive: boolean;
+    onSelectDay: (day: number) => void;
+    onUpdatePois: (day: number, pois: POI[]) => void;
+    onCityChange: (day: number, city: string) => void;
     backendUrl: string;
 }
 
@@ -20,97 +20,109 @@ export default function DayPOISection({
                                           date,
                                           city,
                                           initialPois,
-                                          onUpdatePois,
-                                          onSelectDay,
-                                          onCityChange,
                                           isActive,
+                                          onSelectDay,
+                                          onUpdatePois,
+                                          onCityChange,
+                                          backendUrl,
                                       }: DayPOISectionProps) {
-    const [pois, setPois] = useState<POI[]>(initialPois);
+    const [pois, setPois] = useState<POI[]>(initialPois || []);
+    const cityInputRef = useRef<HTMLInputElement | null>(null);
 
-    // ✅ Handle adding POIs
+    // ✅ Google Places Autocomplete for city input
+    useEffect(() => {
+        if (!(window as any).google || !cityInputRef.current) return;
+
+        const autocomplete = new google.maps.places.Autocomplete(cityInputRef.current, {
+            types: ["(cities)"], // restrict to cities
+            fields: ["formatted_address", "geometry", "name"],
+        });
+
+        autocomplete.addListener("place_changed", () => {
+            const place = autocomplete.getPlace();
+            if (place && place.formatted_address) {
+                onCityChange(day, place.formatted_address);
+            } else if (place && place.name) {
+                onCityChange(day, place.name);
+            }
+        });
+    }, [day, onCityChange]);
+
+    // ✅ Add POI to list
     const handleAddPOI = (poi: POI) => {
-        const updated = [...pois, { ...poi, sequence: pois.length + 1 }];
+        const updated = [...pois, poi];
         setPois(updated);
         onUpdatePois(day, updated);
     };
 
-    // ✅ Handle deleting POIs
-    const handleDeletePOI = (index: number) => {
+    // ✅ Remove POI
+    const handleRemovePOI = (index: number) => {
         const updated = pois.filter((_, i) => i !== index);
         setPois(updated);
         onUpdatePois(day, updated);
     };
 
     return (
-        <section
-            className={`p-4 border rounded-lg shadow-sm cursor-pointer transition ${
-                isActive ? "border-blue-400 bg-blue-50" : "border-gray-200 bg-white"
+        <div
+            className={`p-4 border rounded-lg ${
+                isActive ? "bg-blue-50 border-blue-400" : "bg-white border-gray-300"
             }`}
-            onClick={() => onSelectDay(day)}
         >
-            {/* 🔹 Header */}
-            <div className="flex justify-between items-center mb-4">
-                <div>
-                    <h2 className="text-xl font-semibold">
-                        Day {day} <span className="text-gray-500">({date})</span>
-                    </h2>
-                </div>
+            <div
+                className="flex justify-between items-center cursor-pointer"
+                onClick={() => onSelectDay(day)}
+            >
+                <h2 className="text-xl font-bold">
+                    Day {day}{" "}
+                    <span className="text-gray-600 text-base">({date || "No date"})</span>
+                </h2>
             </div>
 
-            {/* 🔹 City Input */}
-            <div className="mb-4">
+            {/* ✅ City input with Google Autocomplete */}
+            <div className="mt-3">
                 <label className="block text-sm font-medium mb-1">City</label>
                 <input
+                    ref={cityInputRef}
                     type="text"
-                    value={city}
-                    onChange={(e) => onCityChange(day, e.target.value)}
-                    placeholder="Enter city name"
+                    defaultValue={city}
+                    placeholder="Type a city..."
                     className="border px-3 py-2 rounded w-full"
                 />
             </div>
 
-            {/* 🔹 POI Search */}
-            {city && (
-                <div className="mb-4">
-                    <SearchPOI
-                        city={city}
-                        onPick={(poi) => handleAddPOI(poi)}
-                        placeholder="Search places to visit..."
-                    />
-                </div>
-            )}
+            {/* ✅ Search POI input */}
+            <div className="mt-4">
+                <SearchPOI
+                    city={city}
+                    onPick={handleAddPOI}
+                    placeholder="Search places to visit..."
+                />
+            </div>
 
-            {/* 🔹 POI List (copyable) */}
-            <div className="space-y-3">
-                {pois.length === 0 ? (
-                    <p className="text-gray-500 text-sm italic">
-                        No POIs added for this day yet.
-                    </p>
-                ) : (
+            {/* ✅ List of added POIs */}
+            <div className="mt-4 space-y-2">
+                {pois.length > 0 ? (
                     pois.map((poi, i) => (
                         <div
                             key={i}
-                            className="border p-4 rounded-lg shadow-sm flex justify-between items-start select-text"
+                            className="border p-3 rounded flex justify-between items-center bg-white shadow-sm"
                         >
                             <div>
-                                <h3 className="font-bold text-lg">
-                                    {i + 1}. {poi.name}
-                                </h3>
-                                <p className="text-green-700 text-sm">{poi.address}</p>
+                                <p className="font-medium text-black">{poi.name}</p>
+                                <p className="text-sm text-gray-600">{poi.address}</p>
                             </div>
                             <button
-                                onClick={(e) => {
-                                    e.stopPropagation(); // prevent selecting day
-                                    handleDeletePOI(i);
-                                }}
-                                className="text-red-500 hover:text-red-700 text-lg"
+                                onClick={() => handleRemovePOI(i)}
+                                className="text-red-500 hover:text-red-700 font-bold text-lg"
                             >
                                 ✕
                             </button>
                         </div>
                     ))
+                ) : (
+                    <p className="text-gray-500 italic">No POIs added for this day yet.</p>
                 )}
             </div>
-        </section>
+        </div>
     );
 }
