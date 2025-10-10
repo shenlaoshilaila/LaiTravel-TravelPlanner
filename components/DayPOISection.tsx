@@ -15,6 +15,11 @@ interface DayPOISectionProps {
     backendUrl: string;
 }
 
+interface DistanceInfo {
+    drivingText?: string;
+    walkingText?: string;
+}
+
 export default function DayPOISection({
                                           day,
                                           date,
@@ -27,6 +32,7 @@ export default function DayPOISection({
                                           backendUrl,
                                       }: DayPOISectionProps) {
     const [pois, setPois] = useState<POI[]>(initialPois || []);
+    const [distances, setDistances] = useState<Record<number, DistanceInfo>>({});
     const cityInputRef = useRef<HTMLInputElement | null>(null);
 
     // ✅ Google Places Autocomplete for city input
@@ -34,21 +40,21 @@ export default function DayPOISection({
         if (!(window as any).google || !cityInputRef.current) return;
 
         const autocomplete = new google.maps.places.Autocomplete(cityInputRef.current, {
-            types: ["(cities)"], // restrict to cities
+            types: ["(cities)"],
             fields: ["formatted_address", "geometry", "name"],
         });
 
         autocomplete.addListener("place_changed", () => {
             const place = autocomplete.getPlace();
-            if (place && place.formatted_address) {
+            if (place?.formatted_address) {
                 onCityChange(day, place.formatted_address);
-            } else if (place && place.name) {
+            } else if (place?.name) {
                 onCityChange(day, place.name);
             }
         });
     }, [day, onCityChange]);
 
-    // ✅ Add POI to list
+    // ✅ Add POI
     const handleAddPOI = (poi: POI) => {
         const updated = [...pois, poi];
         setPois(updated);
@@ -61,6 +67,65 @@ export default function DayPOISection({
         setPois(updated);
         onUpdatePois(day, updated);
     };
+
+    // ✅ Compute distances between consecutive POIs
+    useEffect(() => {
+        if (!(window as any).google || pois.length < 2) return;
+
+        const service = new google.maps.DistanceMatrixService();
+        const newDistances: Record<number, DistanceInfo> = {};
+
+        pois.forEach((p, i) => {
+            if (i >= pois.length - 1) return;
+            const origin = { lat: p.lat, lng: p.lng };
+            const destination = { lat: pois[i + 1].lat, lng: pois[i + 1].lng };
+
+            const handleResult = (
+                res: google.maps.DistanceMatrixResponse | null,
+                status: google.maps.DistanceMatrixStatus,
+                mode: "driving" | "walking"
+            ) => {
+                if (
+                    status === "OK" &&
+                    res &&
+                    res.rows?.[0]?.elements?.[0]?.status === "OK"
+                ) {
+                    const el = res.rows[0].elements[0];
+                    const text = `${el.distance.text} (${el.duration.text})`;
+
+                    setDistances((prev) => ({
+                        ...prev,
+                        [i]: {
+                            ...prev[i],
+                            ...(mode === "driving"
+                                ? { drivingText: text }
+                                : { walkingText: text }),
+                        },
+                    }));
+                }
+            };
+
+            // Driving
+            service.getDistanceMatrix(
+                {
+                    origins: [origin],
+                    destinations: [destination],
+                    travelMode: google.maps.TravelMode.DRIVING,
+                },
+                (res, status) => handleResult(res, status, "driving")
+            );
+
+            // Walking
+            service.getDistanceMatrix(
+                {
+                    origins: [origin],
+                    destinations: [destination],
+                    travelMode: google.maps.TravelMode.WALKING,
+                },
+                (res, status) => handleResult(res, status, "walking")
+            );
+        });
+    }, [pois]);
 
     return (
         <div
@@ -78,7 +143,7 @@ export default function DayPOISection({
                 </h2>
             </div>
 
-            {/* ✅ City input with Google Autocomplete */}
+            {/* ✅ City Input */}
             <div className="mt-3">
                 <label className="block text-sm font-medium mb-1">City</label>
                 <input
@@ -90,7 +155,7 @@ export default function DayPOISection({
                 />
             </div>
 
-            {/* ✅ Search POI input */}
+            {/* ✅ POI Search */}
             <div className="mt-4">
                 <SearchPOI
                     city={city}
@@ -99,24 +164,31 @@ export default function DayPOISection({
                 />
             </div>
 
-            {/* ✅ List of added POIs */}
+            {/* ✅ POI List */}
             <div className="mt-4 space-y-2">
                 {pois.length > 0 ? (
                     pois.map((poi, i) => (
-                        <div
-                            key={i}
-                            className="border p-3 rounded flex justify-between items-center bg-white shadow-sm"
-                        >
-                            <div>
-                                <p className="font-medium text-black">{poi.name}</p>
-                                <p className="text-sm text-gray-600">{poi.address}</p>
+                        <div key={i}>
+                            <div className="border p-3 rounded flex justify-between items-center bg-white shadow-sm">
+                                <div>
+                                    <p className="font-bold text-black">{poi.name}</p>
+                                    <p className="text-sm text-gray-700">{poi.address}</p>
+                                </div>
+                                <button
+                                    onClick={() => handleRemovePOI(i)}
+                                    className="text-red-500 hover:text-red-700 font-bold text-lg"
+                                >
+                                    ✕
+                                </button>
                             </div>
-                            <button
-                                onClick={() => handleRemovePOI(i)}
-                                className="text-red-500 hover:text-red-700 font-bold text-lg"
-                            >
-                                ✕
-                            </button>
+
+                            {/* ✅ Distance/time info below each pair */}
+                            {distances[i] && (
+                                <div className="ml-8 mt-1 text-sm text-gray-600">
+                                    🚗 {distances[i].drivingText || "Loading..."} <br />
+                                    🚶 {distances[i].walkingText || "Loading..."}
+                                </div>
+                            )}
                         </div>
                     ))
                 ) : (
