@@ -1,4 +1,3 @@
-// components/ItineraryViewer.tsx
 "use client";
 import React from "react";
 import DayPOISection from "./DayPOISection";
@@ -30,7 +29,7 @@ export default function ItineraryViewer({
       () => Object.fromEntries(poisByDay.map((d) => [d.day, city]))
   );
 
-  // Update local POIs when changed
+  // ✅ Update local POIs when changed
   const handleUpdatePois = (day: number, nextForDay: POI[]) => {
     const next = unsavedPOIs.map((d) =>
         d.day === day ? { ...d, pois: nextForDay } : d
@@ -44,7 +43,7 @@ export default function ItineraryViewer({
     setCitiesByDay((prev) => ({ ...prev, [day]: newCity }));
   };
 
-  // Save all POIs to backend
+  // ✅ Save all POIs to backend
   const handleSavePlan = async () => {
     try {
       const res = await fetch(`${BACKEND_URL}/api/itinerary/${id}/save`, {
@@ -56,16 +55,35 @@ export default function ItineraryViewer({
       alert("Saved successfully!");
     } catch (error) {
       console.error("Save error:", error);
+      alert("Failed to save plan. Please try again.");
     }
   };
 
+  // ✅ Helper for driving time between POIs
+  function getDrivingTime(p1: POI, p2: POI): string {
+    if (!p1 || !p2) return "";
+    const R = 6371; // km
+    const dLat = ((p2.lat - p1.lat) * Math.PI) / 180;
+    const dLng = ((p2.lng - p1.lng) * Math.PI) / 180;
+    const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos((p1.lat * Math.PI) / 180) *
+        Math.cos((p2.lat * Math.PI) / 180) *
+        Math.sin(dLng / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c;
+    const timeMin = Math.round((distance / 40) * 60); // Assume 40km/h avg speed
+    return `${timeMin || 5} min drive`;
+  }
+
+  // ✅ Render
   return (
       <div className="space-y-4">
         {unsavedPOIs.map(({ day, date, pois }) => (
             <div key={day} className="space-y-2">
               <DayPOISection
                   day={day}
-                  date={date}   // ✅ now passing date
+                  date={date ?? ""} // ✅ Fix: ensure always a string
                   city={citiesByDay[day] ?? city}
                   initialPois={pois}
                   isActive={activeDay === day}
@@ -75,7 +93,7 @@ export default function ItineraryViewer({
                   backendUrl={BACKEND_URL}
               />
 
-              {/* Driving time between POIs */}
+              {/* 🚗 Driving time between POIs */}
               {pois.length > 1 && (
                   <ol className="pl-8">
                     {pois.map((p, i) =>
@@ -94,29 +112,15 @@ export default function ItineraryViewer({
             </div>
         ))}
 
-        <button
-            onClick={handleSavePlan}
-            className="bg-blue-500 text-white px-4 py-2 rounded"
-        >
-          Save All Changes
-        </button>
+        {/* 💾 Save button */}
+        <div className="pt-4">
+          <button
+              onClick={handleSavePlan}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition"
+          >
+            Save All Changes
+          </button>
+        </div>
       </div>
   );
-
-  // Simple haversine driving time mock
-  function getDrivingTime(p1: POI, p2: POI): string {
-    if (!p1 || !p2) return "";
-    const R = 6371; // km
-    const dLat = ((p2.lat - p1.lat) * Math.PI) / 180;
-    const dLng = ((p2.lng - p1.lng) * Math.PI) / 180;
-    const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos((p1.lat * Math.PI) / 180) *
-        Math.cos((p2.lat * Math.PI) / 180) *
-        Math.sin(dLng / 2) ** 2;
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c;
-    const timeMin = Math.round((distance / 40) * 60);
-    return `${timeMin || 5} min drive`;
-  }
 }
