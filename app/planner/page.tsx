@@ -5,8 +5,8 @@ import PlannerMap from "@/components/PlannerMap";
 import SavePlanButton from "@/components/SavePlanButton";
 import { POI, DayPOI } from "@/components/types";
 import { useRouter } from "next/navigation";
-import AIChatBar from "@/components/AIChatBar";
 import FlightDateExtractor from "@/components/FlightDateExtractor";
+import AIChatPlannerBar from "@/components/AIChatPlannerBar"; // ✅ new import
 
 const BACKEND_URL = "https://travelplanner-720040112489.us-east1.run.app";
 
@@ -70,7 +70,7 @@ export default function PlannerPage() {
                 date: d.toISOString().split("T")[0],
                 city: "",
                 pois: [],
-            } as any);
+            });
             dayCount++;
         }
         setDayPOIs(newDays);
@@ -118,6 +118,14 @@ export default function PlannerPage() {
     const currentCity =
         selectedDay ? dayPOIs.find((d) => d.day === selectedDay)?.city ?? "" : "";
 
+    // ✅ Handle AI-generated plan
+    const handleAIPlanGenerated = (aiDayPOIs: DayPOI[]) => {
+        setDayPOIs(aiDayPOIs);
+        setStartDate(aiDayPOIs[0]?.date || "");
+        setEndDate(aiDayPOIs[aiDayPOIs.length - 1]?.date || "");
+        setSelectedDay(1);
+    };
+
     // ------------------ RENDER ------------------
     return (
         <main className="flex flex-col max-w-full h-screen">
@@ -125,6 +133,9 @@ export default function PlannerPage() {
             <header className="p-4 border-b bg-blue-50">
                 <h1 className="text-2xl font-bold">Itinerary Planner</h1>
             </header>
+
+            {/* ✨ AI Chat Planner Bar (NEW) */}
+            <AIChatPlannerBar onPlanGenerated={handleAIPlanGenerated} />
 
             {/* Flight Date Extractor */}
             <div className="p-4 border-b bg-white">
@@ -229,19 +240,11 @@ export default function PlannerPage() {
                     style={{ flexGrow: 1, width: `${100 - leftWidth}%`, minWidth: "20%" }}
                 >
                     <div className="h-full w-full border rounded shadow">
-                        {/* ✅ The map updates to show current day's city + POIs */}
+                        {/* ✅ Map updates to show current day's POIs */}
                         <PlannerMap city={currentCity} pois={currentDayPois} />
                     </div>
                 </div>
             </div>
-
-            {/* Floating AI Assistant */}
-            <AIChatBar
-                city=""
-                days={dayPOIs.length}
-                selectedDay={selectedDay}
-                dayPOIs={dayPOIs}
-            />
         </main>
     );
 }
