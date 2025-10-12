@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import ReactMarkdown from "react-markdown"; // ✅ Markdown renderer
+import React, { useState, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 import { DayPOI } from "./types";
 
 interface AIChatBarProps {
@@ -29,6 +29,17 @@ export default function AIChatBar({
     ]);
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
+
+    // ✅ Fix 1: Reset chat when city or days change
+    useEffect(() => {
+        setMessages([
+            {
+                sender: "assistant",
+                text: `Hi! I’m your trip assistant. Let's plan your trip to ${city}.`,
+            },
+        ]);
+        setInput("");
+    }, [city, days]);
 
     // ---------- Message send handler ----------
     const sendMessage = async () => {
