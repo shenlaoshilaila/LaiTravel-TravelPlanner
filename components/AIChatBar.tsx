@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import ReactMarkdown from "react-markdown"; // ✅ Markdown renderer
 import { DayPOI } from "./types";
 
 interface AIChatBarProps {
@@ -72,17 +73,19 @@ export default function AIChatBar({
                     {messages.map((m, i) => (
                         <div
                             key={i}
-                            className={`p-2 rounded-lg ${
+                            className={`p-3 rounded-xl shadow-sm max-w-[80%] prose prose-sm ${
                                 m.sender === "user"
-                                    ? "bg-blue-100 text-blue-900 self-end ml-auto w-fit"
-                                    : "bg-gray-100 text-gray-800 self-start mr-auto w-fit"
+                                    ? "bg-blue-100 text-blue-900 ml-auto"
+                                    : "bg-gray-100 text-gray-800 mr-auto border border-gray-200"
                             }`}
                         >
-                            {m.text}
+                            <ReactMarkdown>{m.text}</ReactMarkdown>
                         </div>
                     ))}
                     {loading && (
-                        <div className="text-gray-400 text-sm italic">Assistant typing…</div>
+                        <div className="text-gray-400 text-sm italic">
+                            Assistant typing…
+                        </div>
                     )}
                 </div>
 
@@ -137,17 +140,19 @@ export default function AIChatBar({
                         {messages.map((m, i) => (
                             <div
                                 key={i}
-                                className={`p-2 rounded-lg ${
+                                className={`p-3 rounded-xl shadow-sm max-w-[80%] prose prose-sm ${
                                     m.sender === "user"
-                                        ? "bg-blue-100 text-blue-900 self-end ml-auto w-fit"
-                                        : "bg-gray-100 text-gray-800 self-start mr-auto w-fit"
+                                        ? "bg-blue-100 text-blue-900 ml-auto"
+                                        : "bg-gray-100 text-gray-800 mr-auto border border-gray-200"
                                 }`}
                             >
-                                {m.text}
+                                <ReactMarkdown>{m.text}</ReactMarkdown>
                             </div>
                         ))}
                         {loading && (
-                            <div className="text-gray-400 text-sm italic">Assistant typing…</div>
+                            <div className="text-gray-400 text-sm italic">
+                                Assistant typing…
+                            </div>
                         )}
                     </div>
 

@@ -17,6 +17,7 @@
     "react-beautiful-dnd": "^13.1.1",
     "react-dom": "^18.2.0",
     "react-draggable": "^4.5.0",
+    "react-markdown": "^10.1.0",
     "tesseract.js": "^6.0.1"
   },
   "devDependencies": {
