@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
-import Draggable from "react-draggable"; // 🧩 added
+import Draggable from "react-draggable";
 import { POI } from "@/components/types";
 
 interface PlannerMapProps {
@@ -12,17 +12,19 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
     const mapRef = useRef<HTMLDivElement | null>(null);
     const mapInstance = useRef<google.maps.Map | null>(null);
     const markersRef = useRef<google.maps.Marker[]>([]);
-    const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
-
+    const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(
+        null
+    );
     const [selectedPlace, setSelectedPlace] = useState<any>(null);
+    const lastCityRef = useRef<string>("");
 
-    // ✅ Initialize map
+    // ✅ Initialize map once
     useEffect(() => {
         if (!mapRef.current || !(window as any).google) return;
 
         if (!mapInstance.current) {
             mapInstance.current = new google.maps.Map(mapRef.current, {
-                center: { lat: 39.9042, lng: 116.4074 }, // Default: Beijing
+                center: { lat: 39.9042, lng: 116.4074 }, // Default Beijing
                 zoom: 12,
                 mapTypeControl: false,
                 streetViewControl: false,
@@ -33,32 +35,54 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
 
     // ✅ Center map when city changes
     useEffect(() => {
-        if (!mapInstance.current || !city) return;
+        if (!mapInstance.current) return;
+
+        // Ignore if same city as last render
+        if (city && city === lastCityRef.current) return;
+        lastCityRef.current = city || "";
+
+        // If no city — reset to neutral
+        if (!city) {
+            mapInstance.current.setCenter({ lat: 39.9042, lng: 116.4074 });
+            mapInstance.current.setZoom(4);
+            return;
+        }
+
         const geocoder = new google.maps.Geocoder();
         geocoder.geocode({ address: city }, (results, status) => {
             if (status === google.maps.GeocoderStatus.OK && results?.[0]) {
-                mapInstance.current!.setCenter(results[0].geometry.location);
+                const loc = results[0].geometry.location;
+                // Smooth transition
+                mapInstance.current!.panTo(loc);
                 if (!pois || pois.length === 0) {
-                    mapInstance.current!.setZoom(13);
+                    mapInstance.current!.setZoom(12);
                 }
+            } else {
+                console.warn("Geocode failed for city:", city, status);
             }
         });
     }, [city]);
 
-    // ✅ Update pins and routes
+    // ✅ Update pins and routes when POIs change
     useEffect(() => {
         if (!mapInstance.current) return;
 
+        // Clear old markers
         markersRef.current.forEach((m) => m.setMap(null));
         markersRef.current = [];
 
+        // Clear old route
         if (directionsRendererRef.current) {
             directionsRendererRef.current.setMap(null);
             directionsRendererRef.current = null;
         }
 
+        if (!pois || pois.length === 0) return;
+
         const bounds = new google.maps.LatLngBounds();
-        const placesService = new google.maps.places.PlacesService(mapInstance.current!);
+        const placesService = new google.maps.places.PlacesService(
+            mapInstance.current!
+        );
 
         pois.forEach((poi) => {
             if (!poi.lat || !poi.lng) return;
@@ -111,11 +135,12 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
             bounds.extend({ lat: poi.lat, lng: poi.lng });
         });
 
+        // Fit map to show all markers
         if (pois.length > 0) {
-            mapInstance.current.fitBounds(bounds);
+            mapInstance.current!.fitBounds(bounds);
         }
 
-        // 🛣️ Draw route
+        // 🛣️ Draw route if multiple POIs
         if (pois.length >= 2) {
             const directionsService = new google.maps.DirectionsService();
             const directionsRenderer = new google.maps.DirectionsRenderer({
@@ -151,10 +176,10 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
 
     return (
         <div className="relative w-full h-full flex">
-            {/* 🗺️ Map */}
+            {/* 🗺️ Map container */}
             <div ref={mapRef} className="flex-grow h-full rounded" />
 
-            {/* 🟦 Movable info panel */}
+            {/* 🟦 Movable POI Info Panel */}
             {selectedPlace && (
                 <Draggable handle=".drag-handle" defaultPosition={{ x: 100, y: 100 }}>
                     <div className="fixed bg-white shadow-2xl rounded-2xl w-96 overflow-hidden z-50 cursor-move border">
