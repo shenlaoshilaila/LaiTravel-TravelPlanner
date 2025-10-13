@@ -108,11 +108,26 @@ export default function PlannerPage() {
 
     // ✅ Handle AI auto-fill results
     const handleAIPlanGenerated = (aiDayPOIs: DayPOI[]) => {
+        if (!aiDayPOIs || aiDayPOIs.length === 0) return;
+
+        // ✅ Update planner structure
         setDayPOIs(aiDayPOIs);
         setStartDate(aiDayPOIs[0]?.date || "");
         setEndDate(aiDayPOIs[aiDayPOIs.length - 1]?.date || "");
         setSelectedDay(1);
+
+        // ✅ Auto-set the first city (so map + AIChatBar refresh)
+        const firstCity = aiDayPOIs[0]?.city || "";
+        if (firstCity) {
+            // Update the first day's city
+            setDayPOIs(prev =>
+                prev.map((d, idx) =>
+                    idx === 0 ? { ...d, city: firstCity } : d
+                )
+            );
+        }
     };
+
 
     // ------------------ RENDER ------------------
     return (
