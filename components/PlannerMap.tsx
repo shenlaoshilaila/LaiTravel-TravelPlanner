@@ -12,9 +12,7 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
     const mapRef = useRef<HTMLDivElement | null>(null);
     const mapInstance = useRef<google.maps.Map | null>(null);
     const markersRef = useRef<google.maps.Marker[]>([]);
-    const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(
-        null
-    );
+    const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
     const [selectedPlace, setSelectedPlace] = useState<any>(null);
     const lastCityRef = useRef<string>("");
 
@@ -25,7 +23,7 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
         if (!mapInstance.current) {
             mapInstance.current = new google.maps.Map(mapRef.current, {
                 center: { lat: 39.9042, lng: 116.4074 }, // Default Beijing
-                zoom: 12,
+                zoom: 5,
                 mapTypeControl: false,
                 streetViewControl: false,
                 fullscreenControl: false,
@@ -33,45 +31,53 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
         }
     }, []);
 
-    // ✅ Center map when city changes
+    // ✅ Center map when city changes (robust version)
     useEffect(() => {
-        if (!mapInstance.current) return;
+        if (!mapInstance.current || !city) return;
 
-        // Ignore if same city as last render
-        if (city && city === lastCityRef.current) return;
-        lastCityRef.current = city || "";
+        // Avoid redundant re-geocode
+        if (city === lastCityRef.current) return;
+        lastCityRef.current = city;
 
-        // If no city — reset to neutral
-        if (!city) {
-            mapInstance.current.setCenter({ lat: 39.9042, lng: 116.4074 });
-            mapInstance.current.setZoom(4);
-            return;
-        }
-
+        const map = mapInstance.current;
         const geocoder = new google.maps.Geocoder();
-        geocoder.geocode({ address: city }, (results, status) => {
-            if (status === google.maps.GeocoderStatus.OK && results?.[0]) {
-                const loc = results[0].geometry.location;
-                // Smooth transition
-                mapInstance.current!.panTo(loc);
-                if (!pois || pois.length === 0) {
-                    mapInstance.current!.setZoom(12);
+        let cancelled = false;
+
+        const geocodeCity = (attempt = 1) => {
+            geocoder.geocode({ address: city }, (results, status) => {
+                if (cancelled) return;
+
+                if (
+                    status === google.maps.GeocoderStatus.OK &&
+                    results &&
+                    results[0]
+                ) {
+                    const loc = results[0].geometry.location;
+                    map.panTo(loc);
+                    map.setZoom(12);
+                } else if (attempt === 1) {
+                    // Retry once after a short delay
+                    setTimeout(() => geocodeCity(2), 600);
+                } else {
+                    console.warn("❌ Failed to geocode city:", city, status);
                 }
-            } else {
-                console.warn("Geocode failed for city:", city, status);
-            }
-        });
+            });
+        };
+
+        geocodeCity();
+
+        return () => {
+            cancelled = true;
+        };
     }, [city]);
 
-    // ✅ Update pins and routes when POIs change
+    // ✅ Update markers and route when POIs change
     useEffect(() => {
         if (!mapInstance.current) return;
 
-        // Clear old markers
+        // Clear markers and route
         markersRef.current.forEach((m) => m.setMap(null));
         markersRef.current = [];
-
-        // Clear old route
         if (directionsRendererRef.current) {
             directionsRendererRef.current.setMap(null);
             directionsRendererRef.current = null;
@@ -79,21 +85,20 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
 
         if (!pois || pois.length === 0) return;
 
+        const map = mapInstance.current!;
         const bounds = new google.maps.LatLngBounds();
-        const placesService = new google.maps.places.PlacesService(
-            mapInstance.current!
-        );
+        const placesService = new google.maps.places.PlacesService(map);
 
         pois.forEach((poi) => {
             if (!poi.lat || !poi.lng) return;
 
             const marker = new google.maps.Marker({
                 position: { lat: poi.lat, lng: poi.lng },
-                map: mapInstance.current!,
+                map,
                 title: poi.name,
             });
 
-            // 🧭 Click marker → open POI detail
+            // Marker click → POI detail panel
             marker.addListener("click", () => {
                 if (poi.place_id) {
                     placesService.getDetails(
@@ -135,19 +140,19 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
             bounds.extend({ lat: poi.lat, lng: poi.lng });
         });
 
-        // Fit map to show all markers
+        // Fit map to POIs
         if (pois.length > 0) {
-            mapInstance.current!.fitBounds(bounds);
+            map.fitBounds(bounds);
         }
 
-        // 🛣️ Draw route if multiple POIs
+        // Draw route if 2+ POIs
         if (pois.length >= 2) {
             const directionsService = new google.maps.DirectionsService();
             const directionsRenderer = new google.maps.DirectionsRenderer({
                 suppressMarkers: true,
                 polylineOptions: { strokeColor: "#0078FF", strokeWeight: 4 },
             });
-            directionsRenderer.setMap(mapInstance.current!);
+            directionsRenderer.setMap(map);
             directionsRendererRef.current = directionsRenderer;
 
             const waypoints = pois.slice(1, -1).map((p) => ({
@@ -209,7 +214,8 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
                         <div className="p-4 space-y-2 text-gray-700">
                             <p>
                                 📍{" "}
-                                {selectedPlace.formatted_address ?? "No address available"}
+                                {selectedPlace.formatted_address ??
+                                    "No address available"}
                             </p>
 
                             {selectedPlace.rating && (
