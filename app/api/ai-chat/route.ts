@@ -7,27 +7,15 @@ export async function POST(req: Request) {
 
         if (!message) {
             return NextResponse.json(
-                { reply: "Please include your travel query (e.g., 'Hangzhou, China 10/4–10/5')." },
-                { status: 400 }
-            );
-        }
-
-        // ✅ Require city + country (e.g., has a comma or the word 'China')
-        const cityFormatValid = /[,，]|(china|usa|japan|france|italy|spain|germany|canada|uk|australia)/i.test(
-            message
-        );
-
-        if (!cityFormatValid) {
-            return NextResponse.json(
                 {
                     reply:
-                        "Please include both the city and country in your request — for example: 'Hangzhou, China 10/4–10/5'.",
+                        "Please include your travel query (e.g., 'Hangzhou, China 10/4–10/5').",
                 },
                 { status: 400 }
             );
         }
 
-        // ✅ Verify OpenAI API key
+        // ✅ Verify API key
         const apiKey = process.env.OPENAI_API_KEY;
         if (!apiKey) {
             console.error("❌ Missing OPENAI_API_KEY in environment variables.");
@@ -40,20 +28,40 @@ export async function POST(req: Request) {
         // ✅ Create OpenAI client
         const openai = new OpenAI({ apiKey });
 
-        // ✅ Call the model
+        // ✅ Call the model with an improved system prompt
         const completion = await openai.chat.completions.create({
             model: "gpt-4o-mini",
+            temperature: 0.7,
             messages: [
                 {
                     role: "system",
-                    content:
-                        "You are a friendly and helpful travel assistant. Always give responses in a clear, concise way. When asked for trip planning, provide structured travel day plans and POIs per day.",
+                    content: `
+You are a friendly and helpful travel assistant.
+
+When the user mentions any city name (e.g., Hangzhou, Paris, Tokyo),
+ALWAYS include the country name for clarity — for example:
+  - "Hangzhou, China"
+  - "Paris, France"
+  - "New York, USA"
+
+If the user provides only a city without specifying the country,
+automatically infer and append the correct country.
+
+When generating trip itineraries, each day's "city" field must include
+both the city and country (e.g., "Kyoto, Japan" or "Milan, Italy").
+
+Respond concisely and clearly, using short, friendly explanations when needed.
+If generating a plan, structure it clearly with days, POIs, and travel hints.
+          `,
                 },
-                { role: "user", content: message },
+                {
+                    role: "user",
+                    content: message,
+                },
             ],
-            temperature: 0.7,
         });
 
+        // ✅ Extract AI response
         const reply =
             completion.choices[0]?.message?.content ??
             "Sorry, I couldn’t generate a response this time.";
