@@ -23,6 +23,7 @@ export default function PlannerPage() {
     const [dayPOIs, setDayPOIs] = useState<DayPOI[]>([]);
     const [selectedDay, setSelectedDay] = useState<number | null>(1);
     const [user, setUser] = useState<User>(null);
+    const [errorMsg, setErrorMsg] = useState<string>("");
 
     // --- Resizable Split Pane (Left/Right) ---
     const [leftWidth, setLeftWidth] = useState(50);
@@ -76,13 +77,17 @@ export default function PlannerPage() {
 
     // ------------------ HANDLERS ------------------
     const handleCityChange = (day: number, city: string) => {
-        setDayPOIs((prev) => prev.map((d) => (d.day === day ? { ...d, city } : d)));
+        setDayPOIs((prev) =>
+            prev.map((d) => (d.day === day ? { ...d, city } : d))
+        );
     };
 
     const updatePOIsForDay = (day: number, newPois: POI[]) => {
         setDayPOIs((prev) =>
             prev.map((d) =>
-                d.day === day ? { ...d, pois: newPois.map((p, i) => ({ ...p, sequence: i + 1 })) } : d
+                d.day === day
+                    ? { ...d, pois: newPois.map((p, i) => ({ ...p, sequence: i + 1 })) }
+                    : d
             )
         );
     };
@@ -106,28 +111,28 @@ export default function PlannerPage() {
     const currentCity =
         selectedDay ? dayPOIs.find((d) => d.day === selectedDay)?.city ?? "" : "";
 
-    // ✅ Handle AI auto-fill results
+    // ✅ Handle AI auto-fill results (now expects “City, Country”)
     const handleAIPlanGenerated = (aiDayPOIs: DayPOI[]) => {
         if (!aiDayPOIs || aiDayPOIs.length === 0) return;
 
-        // ✅ Update planner structure
+        const firstCity = aiDayPOIs[0]?.city?.trim() || "";
+
+        // 🔎 Validate that the AI included a comma (City, Country)
+        if (!firstCity.includes(",")) {
+            setErrorMsg(
+                "⚠️ Please include the country name in your query (e.g., 'Hangzhou, China')."
+            );
+            return;
+        } else {
+            setErrorMsg("");
+        }
+
+        // ✅ Apply AI plan
         setDayPOIs(aiDayPOIs);
         setStartDate(aiDayPOIs[0]?.date || "");
         setEndDate(aiDayPOIs[aiDayPOIs.length - 1]?.date || "");
         setSelectedDay(1);
-
-        // ✅ Auto-set the first city (so map + AIChatBar refresh)
-        const firstCity = aiDayPOIs[0]?.city || "";
-        if (firstCity) {
-            // Update the first day's city
-            setDayPOIs(prev =>
-                prev.map((d, idx) =>
-                    idx === 0 ? { ...d, city: firstCity } : d
-                )
-            );
-        }
     };
-
 
     // ------------------ RENDER ------------------
     return (
@@ -162,15 +167,18 @@ export default function PlannerPage() {
                     Step 2 · Auto-Fill Assistant
                 </h2>
                 <p className="text-sm text-gray-600 mb-3">
-                    Tell me your cities and dates (and preferences if you like). Example:
+                    Please type the city and country name (for accuracy). Example:
                     <br />
                     <span className="italic text-gray-500">
-            Hangzhou 10/1–10/3 (nature & food), Shanghai 10/4–10/6 (shopping)
+            Hangzhou, China 10/1–10/3 (nature & food), Shanghai, China 10/4–10/6 (shopping)
           </span>
                 </p>
                 <div className="border rounded-lg shadow-sm bg-white p-3">
                     <AIChatPlannerBar onPlanGenerated={handleAIPlanGenerated} />
                 </div>
+                {errorMsg && (
+                    <p className="text-red-600 text-sm mt-2 font-medium">{errorMsg}</p>
+                )}
             </div>
 
             {/* ✈️ Flight Date Extractor */}
