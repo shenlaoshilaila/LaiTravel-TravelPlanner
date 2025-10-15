@@ -10,54 +10,22 @@ export default function AIChatPlannerBar({ onPlanGenerated }: AIChatPlannerBarPr
     const [query, setQuery] = useState("");
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState(
-        "💬 Do you want me to auto-fill the planner for you? Tell me each city name and the dates you’ll spend there (and preferences if you like)."
+        "💬 Do you want me to auto-fill the planner for you? Tell me each city name and the dates you’ll spend there, and your preferences if you like!"
     );
 
-    // ✅ quick reference for common world cities
-    const cityCountryMap: Record<string, string> = {
-        hangzhou: "Hangzhou, China",
-        shanghai: "Shanghai, China",
-        beijing: "Beijing, China",
-        tokyo: "Tokyo, Japan",
-        osaka: "Osaka, Japan",
-        kyoto: "Kyoto, Japan",
-        paris: "Paris, France",
-        rome: "Rome, Italy",
-        london: "London, UK",
-        newyork: "New York, USA",
-        losangeles: "Los Angeles, USA",
-        sydney: "Sydney, Australia",
-        toronto: "Toronto, Canada",
-    };
+    // ✅ Common country words (to detect if the user already included one)
+    const countryRegex =
+        /(china|usa|united states|japan|france|italy|spain|germany|canada|uk|england|australia|korea|india|thailand)/i;
 
     // --- Basic validation for city/date presence ---
     const validateInput = (text: string) => {
-        const hasCity = /[A-Za-z]+/.test(text);
+        const hasCity = /[A-Z][a-z]+/i.test(text);
         const hasDate = /\d{1,2}[/\-]\d{1,2}/.test(text) || /\d{4}-\d{2}-\d{2}/.test(text);
         if (!hasCity && !hasDate)
             return "⚠️ Please include at least one city name and the dates you'll be there.";
         if (!hasCity) return "⚠️ Please tell me which cities you’ll visit.";
         if (!hasDate) return "⚠️ Please include dates for each city.";
         return null;
-    };
-
-    // ✅ enrich the query with country if missing
-    const ensureCountry = (text: string): string => {
-        // if already has comma or country word
-        if (/[,，]/.test(text) || /(china|usa|japan|france|italy|spain|germany|canada|uk|australia)/i.test(text))
-            return text;
-
-        // try match first city word
-        const firstWord = text.split(/[ ,]/)[0].toLowerCase();
-        if (cityCountryMap[firstWord]) {
-            return text.replace(new RegExp(firstWord, "i"), cityCountryMap[firstWord]);
-        }
-
-        // fallback — ask user to specify
-        setMessage(
-            "🌍 I couldn’t detect the country. Please include the country name (e.g., 'Hangzhou, China')."
-        );
-        return "";
     };
 
     const handleAsk = async () => {
@@ -67,19 +35,26 @@ export default function AIChatPlannerBar({ onPlanGenerated }: AIChatPlannerBarPr
             return;
         }
 
-        // enrich with country
-        const finalQuery = ensureCountry(query);
-        if (!finalQuery) return;
+        // ✅ Check if user forgot to mention the country
+        if (!countryRegex.test(query)) {
+            setMessage(
+                "🌍 Could you please tell me which country this city is in? For example: ‘Hangzhou, China 10/4–10/5’"
+            );
+            return; // stop here until user adds the country
+        }
 
+        // ✅ Proceed with request since we have both city and country
         setLoading(true);
         setMessage("✈️ Planning your itinerary...");
+
         try {
             const res = await fetch("/api/ai-itinerary", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ query: finalQuery }),
+                body: JSON.stringify({ query }),
             });
             const data = await res.json();
+
             if (data.dayPOIs) {
                 onPlanGenerated(data.dayPOIs);
                 setMessage("✅ I’ve filled your planner with suggested POIs for each day!");
@@ -104,7 +79,7 @@ export default function AIChatPlannerBar({ onPlanGenerated }: AIChatPlannerBarPr
                 <input
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="e.g. Hangzhou, China 10/1–10/3 (nature & food), Shanghai 10/4–10/6 (shopping)"
+                    placeholder="e.g. Hangzhou, China 10/1–10/3 (nature & food), Shanghai, China 10/4–10/6 (shopping)"
                     className="border px-3 py-2 rounded flex-1"
                 />
                 <button
