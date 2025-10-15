@@ -15,7 +15,6 @@ export async function POST(req: Request) {
             );
         }
 
-        // ✅ Verify API key
         const apiKey = process.env.OPENAI_API_KEY;
         if (!apiKey) {
             console.error("❌ Missing OPENAI_API_KEY in environment variables.");
@@ -25,10 +24,25 @@ export async function POST(req: Request) {
             );
         }
 
-        // ✅ Create OpenAI client
         const openai = new OpenAI({ apiKey });
 
-        // ✅ Call the model with an improved system prompt
+        // ✅ Detect if user provided a country name
+        const hasCountry =
+            /[,，]/.test(message) ||
+            /(china|japan|usa|france|italy|spain|germany|canada|uk|united kingdom|australia)/i.test(
+                message
+            );
+
+        // ✅ If no country detected — ask user to clarify before generating plan
+        if (!hasCountry) {
+            return NextResponse.json({
+                reply: `I noticed you mentioned a city but not its country. 🌍  
+Could you please tell me which country it’s in?  
+For example: "Hangzhou, China 10/4–10/5"`,
+            });
+        }
+
+        // ✅ Otherwise, generate the full travel plan
         const completion = await openai.chat.completions.create({
             model: "gpt-4o-mini",
             temperature: 0.7,
@@ -38,30 +52,17 @@ export async function POST(req: Request) {
                     content: `
 You are a friendly and helpful travel assistant.
 
-When the user mentions any city name (e.g., Hangzhou, Paris, Tokyo),
-ALWAYS include the country name for clarity — for example:
-  - "Hangzhou, China"
-  - "Paris, France"
-  - "New York, USA"
+When the user mentions a city, ALWAYS include the full location with the country name.
+If the user has already given the country, continue normally.
+If they haven't, politely ask which country it is in before planning anything.
 
-If the user provides only a city without specifying the country,
-automatically infer and append the correct country.
-
-When generating trip itineraries, each day's "city" field must include
-both the city and country (e.g., "Kyoto, Japan" or "Milan, Italy").
-
-Respond concisely and clearly, using short, friendly explanations when needed.
-If generating a plan, structure it clearly with days, POIs, and travel hints.
-          `,
+When generating itineraries, make sure each day's city field includes the country
+(e.g., "Hangzhou, China" or "Kyoto, Japan"). Provide concise, friendly responses.`,
                 },
-                {
-                    role: "user",
-                    content: message,
-                },
+                { role: "user", content: message },
             ],
         });
 
-        // ✅ Extract AI response
         const reply =
             completion.choices[0]?.message?.content ??
             "Sorry, I couldn’t generate a response this time.";
