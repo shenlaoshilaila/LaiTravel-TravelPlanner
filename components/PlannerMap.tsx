@@ -19,7 +19,6 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
     // ✅ Initialize map once
     useEffect(() => {
         if (!mapRef.current || !(window as any).google) return;
-
         if (!mapInstance.current) {
             mapInstance.current = new google.maps.Map(mapRef.current, {
                 center: { lat: 39.9042, lng: 116.4074 }, // Default Beijing
@@ -31,50 +30,43 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
         }
     }, []);
 
-    // ✅ Helper: geocode function with restriction & locality filter
+    // ✅ Helper: geocode function (no restriction)
     const geocodeCity = (targetCity: string, attempt = 1) => {
         const map = mapInstance.current!;
         const geocoder = new google.maps.Geocoder();
 
-        geocoder.geocode(
-            {
-                address: targetCity,
-                componentRestrictions: { country: "CN" },
-            },
-            (results, status) => {
-                if (status === google.maps.GeocoderStatus.OK && results && results.length > 0) {
-                    const cityResult =
-                        results.find((r) => r.types.includes("locality")) || results[0];
-                    const loc = cityResult.geometry.location;
-                    console.log("🗺️ Geocoded city:", targetCity, loc.lat(), loc.lng());
+        geocoder.geocode({ address: targetCity }, (results, status) => {
+            if (status === google.maps.GeocoderStatus.OK && results && results.length > 0) {
+                const cityResult =
+                    results.find((r) => r.types.includes("locality")) || results[0];
+                const loc = cityResult.geometry.location;
+                console.log("🗺️ Geocoded city:", targetCity, loc.lat(), loc.lng());
 
-                    map.setCenter(loc);
-                    map.setZoom(12);
+                map.setCenter(loc);
+                map.setZoom(12);
 
-                    // Fit bounds if POIs exist
-                    if (pois && pois.length > 0) {
-                        const bounds = new google.maps.LatLngBounds();
-                        pois.forEach((p) => {
-                            if (p.lat && p.lng) bounds.extend({ lat: p.lat, lng: p.lng });
-                        });
-                        if (!bounds.isEmpty()) map.fitBounds(bounds);
-                    }
-                } else if (attempt === 1) {
-                    // Retry once
-                    setTimeout(() => geocodeCity(targetCity, 2), 600);
-                } else {
-                    console.warn("❌ Failed to geocode city:", targetCity, status);
+                // Fit bounds if POIs exist
+                if (pois && pois.length > 0) {
+                    const bounds = new google.maps.LatLngBounds();
+                    pois.forEach((p) => {
+                        if (p.lat && p.lng) bounds.extend({ lat: p.lat, lng: p.lng });
+                    });
+                    if (!bounds.isEmpty()) map.fitBounds(bounds);
                 }
+            } else if (attempt === 1) {
+                setTimeout(() => geocodeCity(targetCity, 2), 600);
+            } else {
+                console.warn("❌ Failed to geocode city:", targetCity, status);
             }
-        );
+        });
     };
 
     // ✅ Center map when city changes
     useEffect(() => {
         if (!mapInstance.current) return;
 
-        // First-time fallback: retry after short delay if city was empty
         if (!city) {
+            // Retry if first city not ready yet
             setTimeout(() => {
                 if (city && city !== lastCityRef.current) {
                     lastCityRef.current = city;
@@ -94,7 +86,6 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
     useEffect(() => {
         if (!mapInstance.current) return;
 
-        // Clear old markers and routes
         markersRef.current.forEach((m) => m.setMap(null));
         markersRef.current = [];
         if (directionsRendererRef.current) {
@@ -200,9 +191,7 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
                 <Draggable handle=".drag-handle" defaultPosition={{ x: 100, y: 100 }}>
                     <div className="fixed bg-white shadow-2xl rounded-2xl w-96 overflow-hidden z-50 cursor-move border">
                         <div className="drag-handle flex justify-between items-center bg-gray-100 px-4 py-3 cursor-grab active:cursor-grabbing">
-                            <h2 className="font-bold text-lg text-gray-800">
-                                {selectedPlace.name}
-                            </h2>
+                            <h2 className="font-bold text-lg text-gray-800">{selectedPlace.name}</h2>
                             <button
                                 onClick={() => setSelectedPlace(null)}
                                 className="text-gray-500 hover:text-red-600 text-xl font-semibold"
@@ -220,19 +209,13 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
                         )}
 
                         <div className="p-4 space-y-2 text-gray-700">
-                            <p>
-                                📍{" "}
-                                {selectedPlace.formatted_address ?? "No address available"}
-                            </p>
+                            <p>📍 {selectedPlace.formatted_address ?? "No address available"}</p>
 
-                            {selectedPlace.rating && (
-                                <p>⭐ {selectedPlace.rating.toFixed(1)} / 5</p>
-                            )}
+                            {selectedPlace.rating && <p>⭐ {selectedPlace.rating.toFixed(1)} / 5</p>}
 
                             {selectedPlace.opening_hours && (
                                 <p>
-                                    🕒{" "}
-                                    {selectedPlace.opening_hours.weekday_text?.join(", ")}
+                                    🕒 {selectedPlace.opening_hours.weekday_text?.join(", ")}
                                 </p>
                             )}
 
