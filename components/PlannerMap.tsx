@@ -31,7 +31,7 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
         }
     }, []);
 
-    // ✅ Center map when city changes (robust version)
+    // ✅ Center map when city changes
     useEffect(() => {
         if (!mapInstance.current || !city) return;
 
@@ -47,16 +47,24 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
             geocoder.geocode({ address: city }, (results, status) => {
                 if (cancelled) return;
 
-                if (
-                    status === google.maps.GeocoderStatus.OK &&
-                    results &&
-                    results[0]
-                ) {
+                if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
                     const loc = results[0].geometry.location;
-                    map.panTo(loc);
+                    console.log("🗺️ Geocoded city:", city, loc.lat(), loc.lng());
+
+                    // ✅ Force center immediately (fixes blue screen issue)
+                    map.setCenter(loc);
                     map.setZoom(12);
+
+                    // ✅ Optional: fit POIs if they exist
+                    if (pois && pois.length > 0) {
+                        const bounds = new google.maps.LatLngBounds();
+                        pois.forEach((p) => {
+                            if (p.lat && p.lng) bounds.extend({ lat: p.lat, lng: p.lng });
+                        });
+                        if (!bounds.isEmpty()) map.fitBounds(bounds);
+                    }
                 } else if (attempt === 1) {
-                    // Retry once after a short delay
+                    // Retry once after short delay
                     setTimeout(() => geocodeCity(2), 600);
                 } else {
                     console.warn("❌ Failed to geocode city:", city, status);
@@ -69,13 +77,13 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
         return () => {
             cancelled = true;
         };
-    }, [city]);
+    }, [city, pois]);
 
     // ✅ Update markers and route when POIs change
     useEffect(() => {
         if (!mapInstance.current) return;
 
-        // Clear markers and route
+        // Clear old markers and routes
         markersRef.current.forEach((m) => m.setMap(null));
         markersRef.current = [];
         if (directionsRendererRef.current) {
@@ -98,7 +106,7 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
                 title: poi.name,
             });
 
-            // Marker click → POI detail panel
+            // 🟦 Marker click → open detail panel
             marker.addListener("click", () => {
                 if (poi.place_id) {
                     placesService.getDetails(
@@ -115,10 +123,7 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
                             ],
                         },
                         (place, status) => {
-                            if (
-                                status === google.maps.places.PlacesServiceStatus.OK &&
-                                place
-                            ) {
+                            if (status === google.maps.places.PlacesServiceStatus.OK && place) {
                                 setSelectedPlace(place);
                             } else {
                                 setSelectedPlace({
@@ -140,12 +145,12 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
             bounds.extend({ lat: poi.lat, lng: poi.lng });
         });
 
-        // Fit map to POIs
-        if (pois.length > 0) {
+        // Fit map to show all POIs
+        if (!bounds.isEmpty()) {
             map.fitBounds(bounds);
         }
 
-        // Draw route if 2+ POIs
+        // ✅ Draw route if 2+ POIs
         if (pois.length >= 2) {
             const directionsService = new google.maps.DirectionsService();
             const directionsRenderer = new google.maps.DirectionsRenderer({
@@ -173,6 +178,8 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
                 (result, status) => {
                     if (status === "OK" && result) {
                         directionsRenderer.setDirections(result);
+                    } else {
+                        console.warn("❌ Directions request failed:", status);
                     }
                 }
             );
@@ -184,7 +191,7 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
             {/* 🗺️ Map container */}
             <div ref={mapRef} className="flex-grow h-full rounded" />
 
-            {/* 🟦 Movable POI Info Panel */}
+            {/* 🟦 Draggable POI Detail Panel */}
             {selectedPlace && (
                 <Draggable handle=".drag-handle" defaultPosition={{ x: 100, y: 100 }}>
                     <div className="fixed bg-white shadow-2xl rounded-2xl w-96 overflow-hidden z-50 cursor-move border">
@@ -214,8 +221,7 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
                         <div className="p-4 space-y-2 text-gray-700">
                             <p>
                                 📍{" "}
-                                {selectedPlace.formatted_address ??
-                                    "No address available"}
+                                {selectedPlace.formatted_address ?? "No address available"}
                             </p>
 
                             {selectedPlace.rating && (
