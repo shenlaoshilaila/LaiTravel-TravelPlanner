@@ -9,7 +9,7 @@ export default function HomePage() {
             {/* Background image with focal point */}
             <div className="absolute inset-0 -z-10">
                 <Image
-                    src="/image/tp.png"   // put your file here
+                    src="/image/fp.png"   // put your file here
                     alt=""
                     fill
                     priority
