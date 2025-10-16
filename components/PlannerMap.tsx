@@ -31,31 +31,27 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
         }
     }, []);
 
-    // ✅ Center map when city changes
-    useEffect(() => {
-        if (!mapInstance.current || !city) return;
-
-        // Avoid redundant re-geocode
-        if (city === lastCityRef.current) return;
-        lastCityRef.current = city;
-
-        const map = mapInstance.current;
+    // ✅ Helper: geocode function with restriction & locality filter
+    const geocodeCity = (targetCity: string, attempt = 1) => {
+        const map = mapInstance.current!;
         const geocoder = new google.maps.Geocoder();
-        let cancelled = false;
 
-        const geocodeCity = (attempt = 1) => {
-            geocoder.geocode({ address: city }, (results, status) => {
-                if (cancelled) return;
+        geocoder.geocode(
+            {
+                address: targetCity,
+                componentRestrictions: { country: "CN" },
+            },
+            (results, status) => {
+                if (status === google.maps.GeocoderStatus.OK && results && results.length > 0) {
+                    const cityResult =
+                        results.find((r) => r.types.includes("locality")) || results[0];
+                    const loc = cityResult.geometry.location;
+                    console.log("🗺️ Geocoded city:", targetCity, loc.lat(), loc.lng());
 
-                if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
-                    const loc = results[0].geometry.location;
-                    console.log("🗺️ Geocoded city:", city, loc.lat(), loc.lng());
-
-                    // ✅ Force center immediately (fixes blue screen issue)
                     map.setCenter(loc);
                     map.setZoom(12);
 
-                    // ✅ Optional: fit POIs if they exist
+                    // Fit bounds if POIs exist
                     if (pois && pois.length > 0) {
                         const bounds = new google.maps.LatLngBounds();
                         pois.forEach((p) => {
@@ -64,19 +60,34 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
                         if (!bounds.isEmpty()) map.fitBounds(bounds);
                     }
                 } else if (attempt === 1) {
-                    // Retry once after short delay
-                    setTimeout(() => geocodeCity(2), 600);
+                    // Retry once
+                    setTimeout(() => geocodeCity(targetCity, 2), 600);
                 } else {
-                    console.warn("❌ Failed to geocode city:", city, status);
+                    console.warn("❌ Failed to geocode city:", targetCity, status);
                 }
-            });
-        };
+            }
+        );
+    };
 
-        geocodeCity();
+    // ✅ Center map when city changes
+    useEffect(() => {
+        if (!mapInstance.current) return;
 
-        return () => {
-            cancelled = true;
-        };
+        // First-time fallback: retry after short delay if city was empty
+        if (!city) {
+            setTimeout(() => {
+                if (city && city !== lastCityRef.current) {
+                    lastCityRef.current = city;
+                    geocodeCity(city);
+                }
+            }, 400);
+            return;
+        }
+
+        if (city === lastCityRef.current) return;
+        lastCityRef.current = city;
+
+        geocodeCity(city);
     }, [city, pois]);
 
     // ✅ Update markers and route when POIs change
@@ -106,7 +117,6 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
                 title: poi.name,
             });
 
-            // 🟦 Marker click → open detail panel
             marker.addListener("click", () => {
                 if (poi.place_id) {
                     placesService.getDetails(
@@ -145,12 +155,8 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
             bounds.extend({ lat: poi.lat, lng: poi.lng });
         });
 
-        // Fit map to show all POIs
-        if (!bounds.isEmpty()) {
-            map.fitBounds(bounds);
-        }
+        if (!bounds.isEmpty()) map.fitBounds(bounds);
 
-        // ✅ Draw route if 2+ POIs
         if (pois.length >= 2) {
             const directionsService = new google.maps.DirectionsService();
             const directionsRenderer = new google.maps.DirectionsRenderer({
@@ -188,14 +194,11 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
 
     return (
         <div className="relative w-full h-full flex">
-            {/* 🗺️ Map container */}
             <div ref={mapRef} className="flex-grow h-full rounded" />
 
-            {/* 🟦 Draggable POI Detail Panel */}
             {selectedPlace && (
                 <Draggable handle=".drag-handle" defaultPosition={{ x: 100, y: 100 }}>
                     <div className="fixed bg-white shadow-2xl rounded-2xl w-96 overflow-hidden z-50 cursor-move border">
-                        {/* Header */}
                         <div className="drag-handle flex justify-between items-center bg-gray-100 px-4 py-3 cursor-grab active:cursor-grabbing">
                             <h2 className="font-bold text-lg text-gray-800">
                                 {selectedPlace.name}
@@ -208,7 +211,6 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
                             </button>
                         </div>
 
-                        {/* Photo */}
                         {selectedPlace.photos?.[0] && (
                             <img
                                 src={selectedPlace.photos[0].getUrl({ maxWidth: 600 })}
@@ -217,7 +219,6 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
                             />
                         )}
 
-                        {/* Info */}
                         <div className="p-4 space-y-2 text-gray-700">
                             <p>
                                 📍{" "}
