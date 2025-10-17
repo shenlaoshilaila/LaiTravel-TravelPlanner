@@ -143,13 +143,14 @@ export default function DayPOISection({
                 </h2>
             </div>
 
-            {/* ✅ City Input */}
+            {/* ✅ City Input — fully controlled & synced */}
             <div className="mt-3">
                 <label className="block text-sm font-medium mb-1">City</label>
                 <input
                     ref={cityInputRef}
                     type="text"
-                    defaultValue={city}
+                    value={city} // 👈 synced with parent
+                    onChange={(e) => onCityChange(day, e.target.value)}
                     placeholder="Type a city..."
                     className="border px-3 py-2 rounded w-full"
                 />
