@@ -6,9 +6,10 @@ import { POI } from "@/components/types";
 interface PlannerMapProps {
     pois: POI[];
     city?: string;
+    onCityResolved?: (resolvedCity: string) => void; // ✅ added typed callback
 }
 
-export default function PlannerMap({ pois, city }: PlannerMapProps) {
+export default function PlannerMap({ pois, city, onCityResolved }: PlannerMapProps) {
     const mapRef = useRef<HTMLDivElement | null>(null);
     const mapInstance = useRef<google.maps.Map | null>(null);
     const markersRef = useRef<google.maps.Marker[]>([]);
@@ -45,7 +46,15 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
                 map.setCenter(loc);
                 map.setZoom(12);
 
-                // Fit bounds if POIs exist
+                // ✅ Notify parent (PlannerPage)
+                if (onCityResolved) {
+                    const formatted =
+                        cityResult.formatted_address ||
+                        (cityResult.address_components?.[0]?.long_name ?? targetCity);
+                    onCityResolved(formatted);
+                }
+
+                // ✅ Fit bounds if POIs exist
                 if (pois && pois.length > 0) {
                     const bounds = new google.maps.LatLngBounds();
                     pois.forEach((p) => {
@@ -54,6 +63,7 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
                     if (!bounds.isEmpty()) map.fitBounds(bounds);
                 }
             } else if (attempt === 1) {
+                // Retry once
                 setTimeout(() => geocodeCity(targetCity, 2), 600);
             } else {
                 console.warn("❌ Failed to geocode city:", targetCity, status);
@@ -82,7 +92,7 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
         geocodeCity(city);
     }, [city, pois]);
 
-    // ✅ Update markers and route when POIs change
+    // ✅ Update markers and routes when POIs change
     useEffect(() => {
         if (!mapInstance.current) return;
 
@@ -148,6 +158,7 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
 
         if (!bounds.isEmpty()) map.fitBounds(bounds);
 
+        // ✅ Draw route if more than one POI
         if (pois.length >= 2) {
             const directionsService = new google.maps.DirectionsService();
             const directionsRenderer = new google.maps.DirectionsRenderer({
@@ -191,7 +202,9 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
                 <Draggable handle=".drag-handle" defaultPosition={{ x: 100, y: 100 }}>
                     <div className="fixed bg-white shadow-2xl rounded-2xl w-96 overflow-hidden z-50 cursor-move border">
                         <div className="drag-handle flex justify-between items-center bg-gray-100 px-4 py-3 cursor-grab active:cursor-grabbing">
-                            <h2 className="font-bold text-lg text-gray-800">{selectedPlace.name}</h2>
+                            <h2 className="font-bold text-lg text-gray-800">
+                                {selectedPlace.name}
+                            </h2>
                             <button
                                 onClick={() => setSelectedPlace(null)}
                                 className="text-gray-500 hover:text-red-600 text-xl font-semibold"
@@ -211,7 +224,9 @@ export default function PlannerMap({ pois, city }: PlannerMapProps) {
                         <div className="p-4 space-y-2 text-gray-700">
                             <p>📍 {selectedPlace.formatted_address ?? "No address available"}</p>
 
-                            {selectedPlace.rating && <p>⭐ {selectedPlace.rating.toFixed(1)} / 5</p>}
+                            {selectedPlace.rating && (
+                                <p>⭐ {selectedPlace.rating.toFixed(1)} / 5</p>
+                            )}
 
                             {selectedPlace.opening_hours && (
                                 <p>
