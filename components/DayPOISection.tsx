@@ -35,7 +35,7 @@ export default function DayPOISection({
     const [distances, setDistances] = useState<Record<number, DistanceInfo>>({});
     const cityInputRef = useRef<HTMLInputElement | null>(null);
 
-    // ✅ Google Places Autocomplete for city input
+    // ✅ Setup Google Places Autocomplete for city input
     useEffect(() => {
         if (!(window as any).google || !cityInputRef.current) return;
 
@@ -53,6 +53,13 @@ export default function DayPOISection({
             }
         });
     }, [day, onCityChange]);
+
+    // ✅ Keep input text in sync with prop (important for first AI load)
+    useEffect(() => {
+        if (cityInputRef.current && city) {
+            cityInputRef.current.value = city;
+        }
+    }, [city]);
 
     // ✅ Add POI
     const handleAddPOI = (poi: POI) => {
@@ -73,7 +80,6 @@ export default function DayPOISection({
         if (!(window as any).google || pois.length < 2) return;
 
         const service = new google.maps.DistanceMatrixService();
-        const newDistances: Record<number, DistanceInfo> = {};
 
         pois.forEach((p, i) => {
             if (i >= pois.length - 1) return;
@@ -143,14 +149,15 @@ export default function DayPOISection({
                 </h2>
             </div>
 
-            {/* ✅ City Input — fully controlled & synced */}
+            {/* ✅ City Input — controlled and synced */}
             <div className="mt-3">
                 <label className="block text-sm font-medium mb-1">City</label>
                 <input
                     ref={cityInputRef}
                     type="text"
-                    value={city} // 👈 synced with parent
+                    value={city}
                     onChange={(e) => onCityChange(day, e.target.value)}
+                    onFocus={(e) => e.target.select()} // 💡 auto-select text for quick editing
                     placeholder="Type a city..."
                     className="border px-3 py-2 rounded w-full"
                 />
@@ -183,7 +190,6 @@ export default function DayPOISection({
                                 </button>
                             </div>
 
-                            {/* ✅ Distance/time info below each pair */}
                             {distances[i] && (
                                 <div className="ml-8 mt-1 text-sm text-gray-600">
                                     🚗 {distances[i].drivingText || "Loading..."} <br />
