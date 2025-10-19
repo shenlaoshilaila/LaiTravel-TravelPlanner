@@ -6,14 +6,20 @@ import { POI } from "@/components/types";
 interface PlannerMapProps {
     pois: POI[];
     city?: string;
-    onCityResolved?: (resolvedCity: string) => void; // ✅ added typed callback
+    onCityResolved?: (resolvedCity: string) => void;
 }
 
-export default function PlannerMap({ pois, city, onCityResolved }: PlannerMapProps) {
+export default function PlannerMap({
+                                       pois,
+                                       city,
+                                       onCityResolved,
+                                   }: PlannerMapProps) {
     const mapRef = useRef<HTMLDivElement | null>(null);
     const mapInstance = useRef<google.maps.Map | null>(null);
     const markersRef = useRef<google.maps.Marker[]>([]);
-    const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
+    const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(
+        null
+    );
     const [selectedPlace, setSelectedPlace] = useState<any>(null);
     const lastCityRef = useRef<string>("");
 
@@ -31,30 +37,33 @@ export default function PlannerMap({ pois, city, onCityResolved }: PlannerMapPro
         }
     }, []);
 
-    // ✅ Helper: geocode function (no restriction)
+    // ✅ Helper: Geocode city
     const geocodeCity = (targetCity: string, attempt = 1) => {
         const map = mapInstance.current!;
         const geocoder = new google.maps.Geocoder();
 
         geocoder.geocode({ address: targetCity }, (results, status) => {
-            if (status === google.maps.GeocoderStatus.OK && results && results.length > 0) {
+            if (
+                status === google.maps.GeocoderStatus.OK &&
+                results &&
+                results.length > 0
+            ) {
                 const cityResult =
                     results.find((r) => r.types.includes("locality")) || results[0];
                 const loc = cityResult.geometry.location;
-                console.log("🗺️ Geocoded city:", targetCity, loc.lat(), loc.lng());
-
                 map.setCenter(loc);
                 map.setZoom(12);
 
-                // ✅ Notify parent (PlannerPage)
+                // Notify parent (PlannerPage)
                 if (onCityResolved) {
                     const formatted =
                         cityResult.formatted_address ||
-                        (cityResult.address_components?.[0]?.long_name ?? targetCity);
+                        cityResult.address_components?.[0]?.long_name ||
+                        targetCity;
                     onCityResolved(formatted);
                 }
 
-                // ✅ Fit bounds if POIs exist
+                // Fit bounds if POIs exist
                 if (pois && pois.length > 0) {
                     const bounds = new google.maps.LatLngBounds();
                     pois.forEach((p) => {
@@ -63,7 +72,6 @@ export default function PlannerMap({ pois, city, onCityResolved }: PlannerMapPro
                     if (!bounds.isEmpty()) map.fitBounds(bounds);
                 }
             } else if (attempt === 1) {
-                // Retry once
                 setTimeout(() => geocodeCity(targetCity, 2), 600);
             } else {
                 console.warn("❌ Failed to geocode city:", targetCity, status);
@@ -71,31 +79,51 @@ export default function PlannerMap({ pois, city, onCityResolved }: PlannerMapPro
         });
     };
 
-    // ✅ Center map when city changes
-    useEffect(() => {
-        if (!mapInstance.current) return;
+    // ✅ Geocode POIs by name to add markers
+    const geocodePOIs = async (poisToGeocode: POI[]) => {
+        if (!mapInstance.current || !(window as any).google) return;
+        const map = mapInstance.current!;
+        const geocoder = new google.maps.Geocoder();
 
-        if (!city) {
-            // Retry if first city not ready yet
-            setTimeout(() => {
-                if (city && city !== lastCityRef.current) {
-                    lastCityRef.current = city;
-                    geocodeCity(city);
-                }
-            }, 400);
-            return;
+        const updatedPOIs: POI[] = [];
+
+        for (const poi of poisToGeocode) {
+            if (poi.lat && poi.lng) {
+                updatedPOIs.push(poi);
+                continue;
+            }
+
+            await new Promise<void>((resolve) => {
+                geocoder.geocode(
+                    { address: `${poi.name}${city ? ", " + city : ""}` },
+                    (results, status) => {
+                        if (
+                            status === google.maps.GeocoderStatus.OK &&
+                            results &&
+                            results[0]
+                        ) {
+                            const loc = results[0].geometry.location;
+                            poi.lat = loc.lat();
+                            poi.lng = loc.lng();
+                            poi.place_id = results[0].place_id;
+                            updatedPOIs.push(poi);
+                        } else {
+                            console.warn(`Failed to geocode POI: ${poi.name}`, status);
+                        }
+                        resolve();
+                    }
+                );
+            });
         }
 
-        if (city === lastCityRef.current) return;
-        lastCityRef.current = city;
+        // ✅ Add markers for all resolved POIs
+        addMarkers(updatedPOIs);
+    };
 
-        geocodeCity(city);
-    }, [city, pois]);
-
-    // ✅ Update markers and routes when POIs change
-    useEffect(() => {
+    // ✅ Helper: Add markers and route
+    const addMarkers = (resolvedPOIs: POI[]) => {
         if (!mapInstance.current) return;
-
+        const map = mapInstance.current!;
         markersRef.current.forEach((m) => m.setMap(null));
         markersRef.current = [];
         if (directionsRendererRef.current) {
@@ -103,13 +131,12 @@ export default function PlannerMap({ pois, city, onCityResolved }: PlannerMapPro
             directionsRendererRef.current = null;
         }
 
-        if (!pois || pois.length === 0) return;
+        if (!resolvedPOIs || resolvedPOIs.length === 0) return;
 
-        const map = mapInstance.current!;
         const bounds = new google.maps.LatLngBounds();
         const placesService = new google.maps.places.PlacesService(map);
 
-        pois.forEach((poi) => {
+        resolvedPOIs.forEach((poi) => {
             if (!poi.lat || !poi.lng) return;
 
             const marker = new google.maps.Marker({
@@ -134,7 +161,10 @@ export default function PlannerMap({ pois, city, onCityResolved }: PlannerMapPro
                             ],
                         },
                         (place, status) => {
-                            if (status === google.maps.places.PlacesServiceStatus.OK && place) {
+                            if (
+                                status === google.maps.places.PlacesServiceStatus.OK &&
+                                place
+                            ) {
                                 setSelectedPlace(place);
                             } else {
                                 setSelectedPlace({
@@ -158,8 +188,8 @@ export default function PlannerMap({ pois, city, onCityResolved }: PlannerMapPro
 
         if (!bounds.isEmpty()) map.fitBounds(bounds);
 
-        // ✅ Draw route if more than one POI
-        if (pois.length >= 2) {
+        // ✅ Optional: Draw route between POIs
+        if (resolvedPOIs.length >= 2) {
             const directionsService = new google.maps.DirectionsService();
             const directionsRenderer = new google.maps.DirectionsRenderer({
                 suppressMarkers: true,
@@ -168,17 +198,17 @@ export default function PlannerMap({ pois, city, onCityResolved }: PlannerMapPro
             directionsRenderer.setMap(map);
             directionsRendererRef.current = directionsRenderer;
 
-            const waypoints = pois.slice(1, -1).map((p) => ({
-                location: { lat: p.lat, lng: p.lng },
+            const waypoints = resolvedPOIs.slice(1, -1).map((p) => ({
+                location: { lat: p.lat!, lng: p.lng! },
                 stopover: true,
             }));
 
             directionsService.route(
                 {
-                    origin: { lat: pois[0].lat, lng: pois[0].lng },
+                    origin: { lat: resolvedPOIs[0].lat!, lng: resolvedPOIs[0].lng! },
                     destination: {
-                        lat: pois[pois.length - 1].lat,
-                        lng: pois[pois.length - 1].lng,
+                        lat: resolvedPOIs[resolvedPOIs.length - 1].lat!,
+                        lng: resolvedPOIs[resolvedPOIs.length - 1].lng!,
                     },
                     waypoints,
                     travelMode: google.maps.TravelMode.DRIVING,
@@ -192,6 +222,23 @@ export default function PlannerMap({ pois, city, onCityResolved }: PlannerMapPro
                 }
             );
         }
+    };
+
+    // ✅ Handle city changes
+    useEffect(() => {
+        if (!mapInstance.current) return;
+        if (!city) return;
+
+        if (city !== lastCityRef.current) {
+            lastCityRef.current = city;
+            geocodeCity(city);
+        }
+    }, [city]);
+
+    // ✅ Handle POI updates
+    useEffect(() => {
+        if (!pois || pois.length === 0) return;
+        geocodePOIs(pois);
     }, [pois]);
 
     return (
@@ -222,7 +269,10 @@ export default function PlannerMap({ pois, city, onCityResolved }: PlannerMapPro
                         )}
 
                         <div className="p-4 space-y-2 text-gray-700">
-                            <p>📍 {selectedPlace.formatted_address ?? "No address available"}</p>
+                            <p>
+                                📍{" "}
+                                {selectedPlace.formatted_address ?? "No address available"}
+                            </p>
 
                             {selectedPlace.rating && (
                                 <p>⭐ {selectedPlace.rating.toFixed(1)} / 5</p>
