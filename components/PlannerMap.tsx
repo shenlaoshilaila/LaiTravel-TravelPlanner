@@ -7,7 +7,7 @@ interface PlannerMapProps {
     pois: POI[];
     city?: string;
     onCityResolved?: (resolvedCity: string) => void;
-    dayIndex?: number; // optional: pass day index for color
+    dayIndex?: number;
 }
 
 export default function PlannerMap({
@@ -25,7 +25,7 @@ export default function PlannerMap({
     const [selectedPlace, setSelectedPlace] = useState<any>(null);
     const lastCityRef = useRef<string>("");
 
-    // Initialize map
+    // ✅ Initialize map
     useEffect(() => {
         if (!mapRef.current || !(window as any).google) return;
         if (!mapInstance.current) {
@@ -39,7 +39,7 @@ export default function PlannerMap({
         }
     }, []);
 
-    // Geocode city
+    // ✅ Geocode city
     const geocodeCity = (targetCity: string, attempt = 1) => {
         const map = mapInstance.current!;
         const geocoder = new google.maps.Geocoder();
@@ -75,7 +75,7 @@ export default function PlannerMap({
         });
     };
 
-    // Geocode POIs
+    // ✅ Geocode POIs
     const geocodePOIs = async (poisToGeocode: POI[]) => {
         if (!mapInstance.current || !(window as any).google) return;
         const map = mapInstance.current!;
@@ -110,7 +110,7 @@ export default function PlannerMap({
         addMarkers(updatedPOIs);
     };
 
-    // Add numbered markers + route
+    // ✅ Add numbered red pins + route
     const addMarkers = (resolvedPOIs: POI[]) => {
         if (!mapInstance.current) return;
         const map = mapInstance.current!;
@@ -126,13 +126,14 @@ export default function PlannerMap({
         const bounds = new google.maps.LatLngBounds();
         const placesService = new google.maps.places.PlacesService(map);
 
-        // 🎨 Day color palette
-        const dayColors = ["0078FF", "34A853", "FBBC05", "EA4335"];
-        const color = `#${dayColors[dayIndex % dayColors.length]}`;
+        // 🎨 Route color (varies by day)
+        const dayColors = ["#0078FF", "#34A853", "#FBBC05", "#EA4335"];
+        const color = dayColors[dayIndex % dayColors.length];
 
         resolvedPOIs.forEach((poi, index) => {
             if (!poi.lat || !poi.lng) return;
 
+            // ✅ Regular red pin with label
             const marker = new google.maps.Marker({
                 position: { lat: poi.lat, lng: poi.lng },
                 map,
@@ -140,17 +141,12 @@ export default function PlannerMap({
                 label: {
                     text: `${index + 1}`,
                     color: "white",
-                    fontSize: "14px",
+                    fontSize: "12px",
                     fontWeight: "bold",
                 },
                 icon: {
-                    path: "M16,0C7.163,0,0,7.163,0,16c0,8.837,16,24,16,24s16-15.163,16-24C32,7.163,24.837,0,16,0z",
-                    fillColor: color,
-                    fillOpacity: 1,
-                    strokeColor: "white",
-                    strokeWeight: 2,
-                    scale: 0.8,
-                    anchor: new google.maps.Point(16, 32),
+                    url: "http://maps.google.com/mapfiles/ms/icons/red-dot.png", // default red pin
+                    labelOrigin: new google.maps.Point(15, 10), // center number
                 },
             });
 
@@ -170,10 +166,7 @@ export default function PlannerMap({
                             ],
                         },
                         (place, status) => {
-                            if (
-                                status === google.maps.places.PlacesServiceStatus.OK &&
-                                place
-                            ) {
+                            if (status === google.maps.places.PlacesServiceStatus.OK && place) {
                                 setSelectedPlace(place);
                             } else {
                                 setSelectedPlace({
@@ -197,7 +190,7 @@ export default function PlannerMap({
 
         if (!bounds.isEmpty()) map.fitBounds(bounds);
 
-        // Draw route
+        // ✅ Draw route
         if (resolvedPOIs.length >= 2) {
             const directionsService = new google.maps.DirectionsService();
             const directionsRenderer = new google.maps.DirectionsRenderer({
@@ -233,19 +226,18 @@ export default function PlannerMap({
         }
     };
 
-    // React to city change
+    // ✅ Handle city and POI updates
     useEffect(() => {
-        if (!mapInstance.current || !city) return;
-        if (city !== lastCityRef.current) {
+        if (city && city !== lastCityRef.current) {
             lastCityRef.current = city;
             geocodeCity(city);
         }
     }, [city]);
 
-    // React to POI change
     useEffect(() => {
-        if (!pois || pois.length === 0) return;
-        geocodePOIs(pois);
+        if (pois && pois.length > 0) {
+            geocodePOIs(pois);
+        }
     }, [pois]);
 
     return (
@@ -276,19 +268,10 @@ export default function PlannerMap({
                         )}
 
                         <div className="p-4 space-y-2 text-gray-700">
-                            <p>
-                                📍{" "}
-                                {selectedPlace.formatted_address ?? "No address available"}
-                            </p>
+                            <p>📍 {selectedPlace.formatted_address ?? "No address available"}</p>
 
                             {selectedPlace.rating && (
                                 <p>⭐ {selectedPlace.rating.toFixed(1)} / 5</p>
-                            )}
-
-                            {selectedPlace.opening_hours && (
-                                <p>
-                                    🕒 {selectedPlace.opening_hours.weekday_text?.join(", ")}
-                                </p>
                             )}
 
                             {selectedPlace.url && (
@@ -300,18 +283,6 @@ export default function PlannerMap({
                                 >
                                     View on Google Maps →
                                 </a>
-                            )}
-
-                            {selectedPlace.reviews?.length > 0 && (
-                                <div className="mt-4">
-                                    <h4 className="font-semibold mb-2">Top review:</h4>
-                                    <p className="text-gray-600 text-sm italic">
-                                        “{selectedPlace.reviews[0].text}”
-                                    </p>
-                                    <p className="text-gray-500 text-xs mt-1">
-                                        — {selectedPlace.reviews[0].author_name}
-                                    </p>
-                                </div>
                             )}
                         </div>
                     </div>
