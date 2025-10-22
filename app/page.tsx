@@ -6,16 +6,16 @@ import Image from "next/image";
 export default function HomePage() {
     return (
         <main className="relative h-screen flex items-center justify-center text-center text-white overflow-hidden">
-            {/* Background image with focal point */}
+            {/* Background image */}
             <div className="absolute inset-0 -z-10">
                 <Image
-                    src="/image/fp.png"   // put your file here
+                    src="/image/fp.png" // background image path
                     alt=""
                     fill
                     priority
                     className="
                         object-cover
-                        object-[50%_40%]          /* shift focus up a bit */
+                        object-[50%_40%]
                         md:object-[50%_45%]
                         lg:object-[50%_50%]
                     "
@@ -31,11 +31,21 @@ export default function HomePage() {
                 <p className="text-lg mb-6 max-w-2xl drop-shadow-md">
                     Tell us how long you're staying and where you want to go — we'll craft the perfect route for each day.
                 </p>
+
+                {/* Start Planning Button */}
                 <Link href="/planner">
                     <button className="px-6 py-3 bg-blue-300 text-black rounded-lg hover:bg-blue-400 transition shadow-lg">
                         Start Planning Your Trip
                     </button>
                 </Link>
+
+                {/* New "Happy birthday Liya" Button */}
+                <button
+                    className="mt-4 px-6 py-3 bg-pink-400 text-white rounded-lg hover:bg-pink-500 transition shadow-lg"
+                    onClick={() => alert("🎉 Happy Birthday, Liya!")}
+                >
+                    Happy birthday Liya
+                </button>
             </div>
         </main>
     );
