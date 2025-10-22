@@ -9,7 +9,7 @@ export default function HomePage() {
             {/* Background image */}
             <div className="absolute inset-0 -z-10">
                 <Image
-                    src="/image/fp.png" // background image path
+                    src="/image/fp.png"
                     alt=""
                     fill
                     priority
@@ -39,13 +39,12 @@ export default function HomePage() {
                     </button>
                 </Link>
 
-                {/* New "Happy birthday Liya" Button */}
-                <button
-                    className="mt-4 px-6 py-3 bg-pink-400 text-white rounded-lg hover:bg-pink-500 transition shadow-lg"
-                    onClick={() => alert("🎉 Happy Birthday, Liya!")}
-                >
-                    Happy birthday Liya
-                </button>
+                {/* New Button → Goes to /happy-birthday */}
+                <Link href="/happy-birthday">
+                    <button className="mt-4 px-6 py-3 bg-pink-400 text-white rounded-lg hover:bg-pink-500 transition shadow-lg">
+                        Happy birthday Liya
+                    </button>
+                </Link>
             </div>
         </main>
     );
