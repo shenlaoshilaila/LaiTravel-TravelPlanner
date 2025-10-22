@@ -7,22 +7,30 @@ interface PlannerMapProps {
     pois: POI[];
     city?: string;
     onCityResolved?: (resolvedCity: string) => void;
+    dayIndex?: number; // optional: pass day index for color
 }
 
-export default function PlannerMap({ pois, city, onCityResolved }: PlannerMapProps) {
+export default function PlannerMap({
+                                       pois,
+                                       city,
+                                       onCityResolved,
+                                       dayIndex = 0,
+                                   }: PlannerMapProps) {
     const mapRef = useRef<HTMLDivElement | null>(null);
     const mapInstance = useRef<google.maps.Map | null>(null);
     const markersRef = useRef<google.maps.Marker[]>([]);
-    const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
+    const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(
+        null
+    );
     const [selectedPlace, setSelectedPlace] = useState<any>(null);
     const lastCityRef = useRef<string>("");
 
-    // ✅ Initialize map once
+    // Initialize map
     useEffect(() => {
         if (!mapRef.current || !(window as any).google) return;
         if (!mapInstance.current) {
             mapInstance.current = new google.maps.Map(mapRef.current, {
-                center: { lat: 39.9042, lng: 116.4074 }, // Default Beijing
+                center: { lat: 39.9042, lng: 116.4074 }, // Beijing
                 zoom: 5,
                 mapTypeControl: false,
                 streetViewControl: false,
@@ -31,20 +39,19 @@ export default function PlannerMap({ pois, city, onCityResolved }: PlannerMapPro
         }
     }, []);
 
-    // ✅ Helper: Geocode city
+    // Geocode city
     const geocodeCity = (targetCity: string, attempt = 1) => {
         const map = mapInstance.current!;
         const geocoder = new google.maps.Geocoder();
 
         geocoder.geocode({ address: targetCity }, (results, status) => {
-            if (status === google.maps.GeocoderStatus.OK && results && results.length > 0) {
+            if (status === google.maps.GeocoderStatus.OK && results && results[0]) {
                 const cityResult =
                     results.find((r) => r.types.includes("locality")) || results[0];
                 const loc = cityResult.geometry.location;
                 map.setCenter(loc);
                 map.setZoom(12);
 
-                // Notify parent
                 if (onCityResolved) {
                     const formatted =
                         cityResult.formatted_address ||
@@ -53,7 +60,6 @@ export default function PlannerMap({ pois, city, onCityResolved }: PlannerMapPro
                     onCityResolved(formatted);
                 }
 
-                // Fit bounds if POIs exist
                 if (pois && pois.length > 0) {
                     const bounds = new google.maps.LatLngBounds();
                     pois.forEach((p) => {
@@ -69,7 +75,7 @@ export default function PlannerMap({ pois, city, onCityResolved }: PlannerMapPro
         });
     };
 
-    // ✅ Geocode POIs
+    // Geocode POIs
     const geocodePOIs = async (poisToGeocode: POI[]) => {
         if (!mapInstance.current || !(window as any).google) return;
         const map = mapInstance.current!;
@@ -104,7 +110,7 @@ export default function PlannerMap({ pois, city, onCityResolved }: PlannerMapPro
         addMarkers(updatedPOIs);
     };
 
-    // ✅ Add numbered markers and route
+    // Add numbered markers + route
     const addMarkers = (resolvedPOIs: POI[]) => {
         if (!mapInstance.current) return;
         const map = mapInstance.current!;
@@ -120,17 +126,31 @@ export default function PlannerMap({ pois, city, onCityResolved }: PlannerMapPro
         const bounds = new google.maps.LatLngBounds();
         const placesService = new google.maps.places.PlacesService(map);
 
+        // 🎨 Day color palette
+        const dayColors = ["0078FF", "34A853", "FBBC05", "EA4335"];
+        const color = `#${dayColors[dayIndex % dayColors.length]}`;
+
         resolvedPOIs.forEach((poi, index) => {
             if (!poi.lat || !poi.lng) return;
 
-            // ✅ Create Google-style numbered marker
             const marker = new google.maps.Marker({
                 position: { lat: poi.lat, lng: poi.lng },
                 map,
                 title: `${index + 1}. ${poi.name}`,
+                label: {
+                    text: `${index + 1}`,
+                    color: "white",
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                },
                 icon: {
-                    url: `https://chart.googleapis.com/chart?chst=d_map_pin_letter&chld=${index + 1}|0078FF|FFFFFF`,
-                    scaledSize: new google.maps.Size(40, 40),
+                    path: "M16,0C7.163,0,0,7.163,0,16c0,8.837,16,24,16,24s16-15.163,16-24C32,7.163,24.837,0,16,0z",
+                    fillColor: color,
+                    fillOpacity: 1,
+                    strokeColor: "white",
+                    strokeWeight: 2,
+                    scale: 0.8,
+                    anchor: new google.maps.Point(16, 32),
                 },
             });
 
@@ -150,7 +170,10 @@ export default function PlannerMap({ pois, city, onCityResolved }: PlannerMapPro
                             ],
                         },
                         (place, status) => {
-                            if (status === google.maps.places.PlacesServiceStatus.OK && place) {
+                            if (
+                                status === google.maps.places.PlacesServiceStatus.OK &&
+                                place
+                            ) {
                                 setSelectedPlace(place);
                             } else {
                                 setSelectedPlace({
@@ -174,12 +197,12 @@ export default function PlannerMap({ pois, city, onCityResolved }: PlannerMapPro
 
         if (!bounds.isEmpty()) map.fitBounds(bounds);
 
-        // ✅ Draw route between POIs
+        // Draw route
         if (resolvedPOIs.length >= 2) {
             const directionsService = new google.maps.DirectionsService();
             const directionsRenderer = new google.maps.DirectionsRenderer({
                 suppressMarkers: true,
-                polylineOptions: { strokeColor: "#0078FF", strokeWeight: 4 },
+                polylineOptions: { strokeColor: color, strokeWeight: 4 },
             });
             directionsRenderer.setMap(map);
             directionsRendererRef.current = directionsRenderer;
@@ -210,17 +233,16 @@ export default function PlannerMap({ pois, city, onCityResolved }: PlannerMapPro
         }
     };
 
-    // ✅ Handle city change
+    // React to city change
     useEffect(() => {
-        if (!mapInstance.current) return;
-        if (!city) return;
+        if (!mapInstance.current || !city) return;
         if (city !== lastCityRef.current) {
             lastCityRef.current = city;
             geocodeCity(city);
         }
     }, [city]);
 
-    // ✅ Handle POIs update
+    // React to POI change
     useEffect(() => {
         if (!pois || pois.length === 0) return;
         geocodePOIs(pois);
