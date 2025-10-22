@@ -1,19 +1,29 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 export default function WinPage() {
     const [digits, setDigits] = useState(["?", "?", "?", "?"]);
-    const [currentIndex, setCurrentIndex] = useState(3); // start from ones place (index 3)
+    const [currentIndex, setCurrentIndex] = useState(3); // start from ones
     const [finished, setFinished] = useState(false);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
 
-    // 🎲 roll digit function
+    // 🎵 play sound when result appears
+    useEffect(() => {
+        if (finished && audioRef.current) {
+            audioRef.current.currentTime = 0;
+            audioRef.current.play().catch(() => {
+                console.log("Autoplay blocked, sound will play after interaction.");
+            });
+        }
+    }, [finished]);
+
     const rollDigit = (index: number) => {
-        if (index !== currentIndex) return; // prevent skipping order
+        if (index !== currentIndex) return;
 
         const newDigits = [...digits];
         let value: number;
 
-        // thousand place special probability
+        // Thousand place with custom probability
         if (index === 0) {
             const rand = Math.random() * 100;
             if (rand < 60) value = 0;
@@ -26,7 +36,7 @@ export default function WinPage() {
         newDigits[index] = value.toString();
         setDigits(newDigits);
 
-        // move to next (to the left)
+        // next index
         if (index > 0) {
             setCurrentIndex(index - 1);
         } else {
@@ -44,11 +54,14 @@ export default function WinPage() {
 
     return (
         <main className="h-screen flex flex-col items-center justify-center bg-gradient-to-b from-amber-200 to-yellow-400 text-center text-gray-900">
+            {/* 🔊 success sound */}
+            <audio ref={audioRef} src="/music/win.mp3" />
+
             <h1 className="text-5xl font-extrabold mb-8 drop-shadow-lg">
                 💰 Win Your Birthday Money 💰
             </h1>
 
-            {/* 🔢 Boxes (thousand → one) */}
+            {/* 4 boxes */}
             <div className="flex gap-4 mb-8">
                 {digits.map((d, i) => (
                     <div
@@ -64,7 +77,7 @@ export default function WinPage() {
                 ))}
             </div>
 
-            {/* 🎯 Buttons */}
+            {/* Buttons */}
             <div className="flex gap-4 mb-10">
                 {["Thousand", "Hundred", "Ten", "One"].map((label, i) => (
                     <button
@@ -82,14 +95,14 @@ export default function WinPage() {
                 ))}
             </div>
 
-            {/* 🎉 Result */}
+            {/* Result */}
             {moneyValue && (
                 <div className="text-3xl font-bold animate-bounce">
                     🎉 You Won ${moneyValue}! 🎉
                 </div>
             )}
 
-            {/* 🔁 Play again */}
+            {/* Play Again */}
             <button
                 onClick={resetGame}
                 className="mt-8 px-6 py-3 bg-pink-500 text-white rounded-lg hover:bg-pink-600 transition shadow-lg"

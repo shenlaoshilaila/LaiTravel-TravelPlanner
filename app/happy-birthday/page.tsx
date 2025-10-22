@@ -1,15 +1,32 @@
 "use client";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
 export default function HappyBirthdayPage() {
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+
+    useEffect(() => {
+        // Try to autoplay the music when page loads
+        const audio = audioRef.current;
+        if (audio) {
+            // Some browsers block autoplay without user interaction,
+            // so catch any errors silently.
+            audio.play().catch(() => {
+                console.log("Autoplay blocked. Music will start after first user click.");
+            });
+        }
+    }, []);
+
     return (
         <main className="relative h-screen flex flex-col items-center justify-center overflow-hidden text-center text-white">
+            {/* 🎵 Background Music */}
+            <audio ref={audioRef} src="/music/happy-birthday.mp3" loop />
+
             {/* 🎆 Fireworks background */}
             <div className="absolute inset-0 -z-10">
                 <Image
-                    src="/image/fireworks.gif" // 🔥 put your GIF at /public/image/fireworks.gif
+                    src="/image/fireworks.gif"
                     alt="Fireworks celebration"
                     fill
                     className="object-cover"
@@ -29,7 +46,7 @@ export default function HappyBirthdayPage() {
                 🎂 Happy Birthday Liya 🎉
             </h1>
 
-            {/* 💰 "Win Your Money" Button */}
+            {/* 💰 Button */}
             <Link href="/win">
                 <button
                     className="
@@ -43,7 +60,6 @@ export default function HappyBirthdayPage() {
             </Link>
 
             <style jsx>{`
-                /* Pop effect for title */
                 @keyframes pop {
                     0% {
                         transform: scale(0.5);
@@ -61,7 +77,6 @@ export default function HappyBirthdayPage() {
                     animation: pop 1.2s ease-out;
                 }
 
-                /* Bounce-in for button */
                 @keyframes bounceIn {
                     0% {
                         transform: translateY(200px);
