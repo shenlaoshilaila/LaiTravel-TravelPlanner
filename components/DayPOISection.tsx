@@ -39,12 +39,17 @@ export default function DayPOISection({
     const [dragIndex, setDragIndex] = useState<number | null>(null);
     const cityInputRef = useRef<HTMLInputElement | null>(null);
 
-    // ✅ Keep POIs synced with parent updates (AI or manual)
+    // ✅ Sync POIs when parent updates (AI autofill or restore)
     useEffect(() => {
-        setPois(initialPois || []);
+        // Deep compare by stringifying to force refresh when content changes
+        const current = JSON.stringify(pois);
+        const incoming = JSON.stringify(initialPois || []);
+        if (current !== incoming) {
+            setPois(initialPois || []);
+        }
     }, [initialPois]);
 
-    // ✅ Google Places Autocomplete
+    // ✅ Google Autocomplete
     useEffect(() => {
         if (!(window as any).google || !cityInputRef.current) return;
         const autocomplete = new google.maps.places.Autocomplete(cityInputRef.current, {
@@ -61,7 +66,7 @@ export default function DayPOISection({
         });
     }, [day, onCityChange]);
 
-    // ✅ Sync input field with prop
+    // ✅ Keep city input in sync with parent
     useEffect(() => {
         if (cityInputRef.current && city) {
             cityInputRef.current.value = city;
@@ -75,16 +80,13 @@ export default function DayPOISection({
         onUpdatePois(day, updated);
     };
 
-    // ✅ Remove POI (local + global)
+    // ✅ Remove POI locally and globally
     const handleRemovePOI = (index: number) => {
         const poiToRemove = pois[index];
         const updated = pois.filter((_, i) => i !== index);
         setPois(updated);
         onUpdatePois(day, updated);
-
-        if (onRemovePOIGlobally) {
-            onRemovePOIGlobally(poiToRemove);
-        }
+        onRemovePOIGlobally?.(poiToRemove);
     };
 
     // ✅ Drag & Drop reorder
@@ -99,11 +101,11 @@ export default function DayPOISection({
         setDragIndex(null);
     };
 
-    // ✅ Distance calculation
+    // ✅ Compute driving/walking distances between consecutive POIs
     useEffect(() => {
         if (!(window as any).google || pois.length < 2) return;
-
         const service = new google.maps.DistanceMatrixService();
+
         pois.forEach((p, i) => {
             if (i >= pois.length - 1) return;
             const origin = { lat: p.lat, lng: p.lng };
@@ -129,21 +131,19 @@ export default function DayPOISection({
                 }
             };
 
-            const modes: { type: google.maps.TravelMode; label: "driving" | "walking" }[] = [
-                { type: google.maps.TravelMode.DRIVING, label: "driving" },
-                { type: google.maps.TravelMode.WALKING, label: "walking" },
-            ];
-
-            modes.forEach(({ type, label }) => {
-                service.getDistanceMatrix(
-                    {
-                        origins: [origin],
-                        destinations: [destination],
-                        travelMode: type,
-                    },
-                    (res, status) => handleResult(res, status, label)
-                );
-            });
+            [google.maps.TravelMode.DRIVING, google.maps.TravelMode.WALKING].forEach(
+                (mode) => {
+                    service.getDistanceMatrix(
+                        {
+                            origins: [origin],
+                            destinations: [destination],
+                            travelMode: mode,
+                        },
+                        (res, status) =>
+                            handleResult(res, status, mode === "DRIVING" ? "driving" : "walking")
+                    );
+                }
+            );
         });
     }, [pois]);
 
@@ -153,6 +153,7 @@ export default function DayPOISection({
                 isActive ? "bg-blue-50 border-blue-400" : "bg-white border-gray-300"
             }`}
         >
+            {/* Header */}
             <div
                 className="flex justify-between items-center cursor-pointer"
                 onClick={() => onSelectDay(day)}
@@ -163,7 +164,7 @@ export default function DayPOISection({
                 </h2>
             </div>
 
-            {/* ✅ City Input */}
+            {/* City input */}
             <div className="mt-3">
                 <label className="block text-sm font-medium mb-1">City</label>
                 <input
@@ -177,7 +178,7 @@ export default function DayPOISection({
                 />
             </div>
 
-            {/* ✅ POI Search */}
+            {/* POI Search */}
             <div className="mt-4">
                 <SearchPOI
                     city={city}
@@ -186,12 +187,12 @@ export default function DayPOISection({
                 />
             </div>
 
-            {/* ✅ POI List */}
+            {/* POI List */}
             <div className="mt-4 space-y-2">
                 {pois.length > 0 ? (
                     pois.map((poi, i) => (
                         <div
-                            key={i}
+                            key={`${poi.name}-${i}`}
                             draggable
                             onDragStart={() => handleDragStart(i)}
                             onDragOver={(e) => e.preventDefault()}
@@ -207,8 +208,7 @@ export default function DayPOISection({
                                 )}
                                 {distances[i] && (
                                     <p className="text-xs text-gray-500 mt-1">
-                                        🚗 {distances[i].drivingText} · 🚶{" "}
-                                        {distances[i].walkingText}
+                                        🚗 {distances[i].drivingText} · 🚶 {distances[i].walkingText}
                                     </p>
                                 )}
                             </div>
@@ -221,9 +221,7 @@ export default function DayPOISection({
                         </div>
                     ))
                 ) : (
-                    <p className="text-gray-500 italic">
-                        No POIs added for this day yet.
-                    </p>
+                    <p className="text-gray-500 italic">No POIs added for this day yet.</p>
                 )}
             </div>
         </div>
