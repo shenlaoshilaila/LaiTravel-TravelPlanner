@@ -42,7 +42,7 @@ export default function HomePage() {
                 {/* New Button → Goes to /happy-birthday */}
                 <Link href="/happy-birthday">
                     <button className="mt-4 px-6 py-3 bg-pink-400 text-white rounded-lg hover:bg-pink-500 transition shadow-lg">
-                        Happy birthday Liya
+                        Go to Gameroom
                     </button>
                 </Link>
             </div>

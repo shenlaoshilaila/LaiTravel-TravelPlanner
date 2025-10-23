@@ -1,102 +1,56 @@
 "use client";
-import React, { useEffect, useRef } from "react";
-import Image from "next/image";
+import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 
-export default function HappyBirthdayPage() {
-    const audioRef = useRef<HTMLAudioElement | null>(null);
-
-    useEffect(() => {
-        // Try to autoplay the music when page loads
-        const audio = audioRef.current;
-        if (audio) {
-            // Some browsers block autoplay without user interaction,
-            // so catch any errors silently.
-            audio.play().catch(() => {
-                console.log("Autoplay blocked. Music will start after first user click.");
-            });
-        }
-    }, []);
-
+export default function GameMenuPage() {
     return (
-        <main className="relative h-screen flex flex-col items-center justify-center overflow-hidden text-center text-white">
-            {/* 🎵 Background Music */}
-            <audio ref={audioRef} src="/music/happy-birthday.mp3" loop />
+        <main className="relative h-screen flex flex-col items-center justify-center text-center text-white font-sans overflow-hidden">
+            {/* 🌆 Animated Background */}
+            <Image
+                src="/image/gamebackground.gif"
+                alt="Game Background"
+                fill
+                priority
+                className="object-cover -z-10"
+            />
 
-            {/* 🎆 Fireworks background */}
-            <div className="absolute inset-0 -z-10">
-                <Image
-                    src="/image/fireworks.gif"
-                    alt="Fireworks celebration"
-                    fill
-                    className="object-cover"
-                    priority
-                />
-                <div className="absolute inset-0 bg-black/40" />
-            </div>
-
-            {/* 🎉 Title */}
-            <h1
-                className="
-                    text-6xl md:text-8xl font-extrabold
-                    drop-shadow-2xl
-                    animate-pop
-                "
-            >
-                🎂 Happy Birthday Liya 🎉
+            {/* 🎮 Game Title */}
+            <h1 className="text-6xl md:text-7xl font-extrabold mb-12 tracking-wide drop-shadow-lg">
+                🎮 Welcome to Game Room
             </h1>
 
-            {/* 💰 Button */}
-            <Link href="/win">
+            {/* 🕹️ Game Options */}
+            <div className="flex flex-col gap-6 w-full max-w-sm items-center">
+                {/* Game 1 - Win Your Birthday Money */}
+                <Link href="/win">
+                    <button
+                        className="
+                            w-64 py-4 bg-blue-500 hover:bg-blue-600
+                            text-white font-bold text-xl rounded-xl
+                            transition-all duration-300 transform hover:scale-105 shadow-lg
+                        "
+                    >
+                        💰 Win Your Birthday Money
+                    </button>
+                </Link>
+
+                {/* Placeholder for future games */}
                 <button
+                    disabled
                     className="
-                        mt-8 px-8 py-4 bg-yellow-400 text-black font-bold
-                        rounded-xl hover:bg-yellow-500 transition shadow-2xl
-                        animate-bounce-in
+                        w-64 py-4 bg-gray-500 text-gray-300 font-bold text-xl rounded-xl
+                        opacity-50 cursor-not-allowed shadow-md
                     "
                 >
-                    💰 Win Your Money
+                    🎲 Coming Soon...
                 </button>
-            </Link>
+            </div>
 
-            <style jsx>{`
-                @keyframes pop {
-                    0% {
-                        transform: scale(0.5);
-                        opacity: 0;
-                    }
-                    50% {
-                        transform: scale(1.2);
-                        opacity: 1;
-                    }
-                    100% {
-                        transform: scale(1);
-                    }
-                }
-                .animate-pop {
-                    animation: pop 1.2s ease-out;
-                }
-
-                @keyframes bounceIn {
-                    0% {
-                        transform: translateY(200px);
-                        opacity: 0;
-                    }
-                    60% {
-                        transform: translateY(-20px);
-                        opacity: 1;
-                    }
-                    80% {
-                        transform: translateY(10px);
-                    }
-                    100% {
-                        transform: translateY(0);
-                    }
-                }
-                .animate-bounce-in {
-                    animation: bounceIn 1.5s ease-out 1.2s both;
-                }
-            `}</style>
+            {/* Footer */}
+            <footer className="absolute bottom-8 text-gray-300 text-sm">
+                © 2025 Liya’s Game Room
+            </footer>
         </main>
     );
 }

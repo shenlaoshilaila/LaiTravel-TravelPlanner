@@ -13,6 +13,7 @@ interface DayPOISectionProps {
     onUpdatePois: (day: number, pois: POI[]) => void;
     onCityChange: (day: number, city: string) => void;
     backendUrl: string;
+    onRemovePOIGlobally?: (poi: POI) => void;
 }
 
 interface DistanceInfo {
@@ -30,6 +31,7 @@ export default function DayPOISection({
                                           onUpdatePois,
                                           onCityChange,
                                           backendUrl,
+                                          onRemovePOIGlobally,
                                       }: DayPOISectionProps) {
     const [pois, setPois] = useState<POI[]>(initialPois || []);
     const [distances, setDistances] = useState<Record<number, DistanceInfo>>({});
@@ -53,7 +55,7 @@ export default function DayPOISection({
         });
     }, [day, onCityChange]);
 
-    // ✅ Keep input synced with prop
+    // ✅ Sync input with prop
     useEffect(() => {
         if (cityInputRef.current && city) {
             cityInputRef.current.value = city;
@@ -67,34 +69,36 @@ export default function DayPOISection({
         onUpdatePois(day, updated);
     };
 
-    // ✅ Remove POI
+    // ✅ Remove POI (local + global)
     const handleRemovePOI = (index: number) => {
+        const poiToRemove = pois[index];
         const updated = pois.filter((_, i) => i !== index);
         setPois(updated);
         onUpdatePois(day, updated);
+
+        // 🔁 also remove globally if callback provided
+        if (onRemovePOIGlobally) {
+            onRemovePOIGlobally(poiToRemove);
+        }
     };
 
-    // ✅ Handle reorder (drag + drop)
-    const handleDragStart = (index: number) => {
-        setDragIndex(index);
-    };
-
+    // ✅ Drag & Drop reorder
+    const handleDragStart = (index: number) => setDragIndex(index);
     const handleDrop = (index: number) => {
         if (dragIndex === null) return;
         const updated = [...pois];
-        const [movedItem] = updated.splice(dragIndex, 1);
-        updated.splice(index, 0, movedItem);
+        const [moved] = updated.splice(dragIndex, 1);
+        updated.splice(index, 0, moved);
         setPois(updated);
         onUpdatePois(day, updated);
         setDragIndex(null);
     };
 
-    // ✅ Compute distances
+    // ✅ Distance calculation
     useEffect(() => {
         if (!(window as any).google || pois.length < 2) return;
 
         const service = new google.maps.DistanceMatrixService();
-
         pois.forEach((p, i) => {
             if (i >= pois.length - 1) return;
             const origin = { lat: p.lat, lng: p.lng };
@@ -105,14 +109,9 @@ export default function DayPOISection({
                 status: google.maps.DistanceMatrixStatus,
                 mode: "driving" | "walking"
             ) => {
-                if (
-                    status === "OK" &&
-                    res &&
-                    res.rows?.[0]?.elements?.[0]?.status === "OK"
-                ) {
+                if (status === "OK" && res?.rows?.[0]?.elements?.[0]?.status === "OK") {
                     const el = res.rows[0].elements[0];
                     const text = `${el.distance.text} (${el.duration.text})`;
-
                     setDistances((prev) => ({
                         ...prev,
                         [i]: {
@@ -125,11 +124,11 @@ export default function DayPOISection({
                 }
             };
 
-            // ✅ DRIVING + WALKING (with proper enum typing)
-            const modes: { type: google.maps.TravelMode; label: "driving" | "walking" }[] = [
-                { type: google.maps.TravelMode.DRIVING, label: "driving" },
-                { type: google.maps.TravelMode.WALKING, label: "walking" },
-            ];
+            const modes: { type: google.maps.TravelMode; label: "driving" | "walking" }[] =
+                [
+                    { type: google.maps.TravelMode.DRIVING, label: "driving" },
+                    { type: google.maps.TravelMode.WALKING, label: "walking" },
+                ];
 
             modes.forEach(({ type, label }) => {
                 service.getDistanceMatrix(
@@ -183,7 +182,7 @@ export default function DayPOISection({
                 />
             </div>
 
-            {/* ✅ POI List (draggable) */}
+            {/* ✅ POI List */}
             <div className="mt-4 space-y-2">
                 {pois.length > 0 ? (
                     pois.map((poi, i) => (
@@ -210,7 +209,9 @@ export default function DayPOISection({
                         </div>
                     ))
                 ) : (
-                    <p className="text-gray-500 italic">No POIs added for this day yet.</p>
+                    <p className="text-gray-500 italic">
+                        No POIs added for this day yet.
+                    </p>
                 )}
             </div>
         </div>

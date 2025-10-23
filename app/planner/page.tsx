@@ -45,7 +45,9 @@ export default function PlannerPage() {
     useEffect(() => {
         (async () => {
             try {
-                const r = await fetch(`${BACKEND_URL}/auth/me`, { credentials: "include" });
+                const r = await fetch(`${BACKEND_URL}/auth/me`, {
+                    credentials: "include",
+                });
                 if (r.ok) setUser(await r.json());
             } catch (e) {
                 console.warn("Auth error", e);
@@ -77,7 +79,9 @@ export default function PlannerPage() {
 
     // ---------- HANDLERS ----------
     const handleCityChange = (day: number, city: string) => {
-        setDayPOIs((prev) => prev.map((d) => (d.day === day ? { ...d, city } : d)));
+        setDayPOIs((prev) =>
+            prev.map((d) => (d.day === day ? { ...d, city } : d))
+        );
     };
 
     const updatePOIsForDay = (day: number, newPois: POI[]) => {
@@ -87,6 +91,16 @@ export default function PlannerPage() {
                     ? { ...d, pois: newPois.map((p, i) => ({ ...p, sequence: i + 1 })) }
                     : d
             )
+        );
+    };
+
+    // ✅ NEW: remove a POI globally across all days
+    const handleRemovePOIGlobally = (poiToRemove: POI) => {
+        setDayPOIs((prev) =>
+            prev.map((day) => ({
+                ...day,
+                pois: day.pois.filter((p) => p.name !== poiToRemove.name),
+            }))
         );
     };
 
@@ -123,15 +137,15 @@ export default function PlannerPage() {
             setErrorMsg("");
         }
 
-        // ✅ Convert plain strings → POI objects
         const converted: DayPOI[] = aiDayPOIs.map((day) => ({
             ...day,
             pois: (day.pois || []).map((p: any, idx: number) =>
-                typeof p === "string" ? { name: p, sequence: idx + 1 } : { ...p, sequence: idx + 1 }
+                typeof p === "string"
+                    ? { name: p, sequence: idx + 1 }
+                    : { ...p, sequence: idx + 1 }
             ),
         }));
 
-        // ✅ Apply state
         setDayPOIs([]);
         setTimeout(() => {
             setDayPOIs(converted);
@@ -177,9 +191,9 @@ export default function PlannerPage() {
                     Type the city and country name (for accuracy). Example:
                     <br />
                     <span className="italic text-gray-500">
-            Hangzhou, China 10/1–10/3 (nature & food), Shanghai, China 10/4–10/6
-            (shopping)
-          </span>
+                        Hangzhou, China 10/1–10/3 (nature & food), Shanghai, China 10/4–10/6
+                        (shopping)
+                    </span>
                 </p>
                 <div className="border rounded-lg shadow-sm bg-white p-3">
                     <AIChatPlannerBar onPlanGenerated={handleAIPlanGenerated} />
@@ -250,6 +264,7 @@ export default function PlannerPage() {
                                 onCityChange={handleCityChange}
                                 isActive={selectedDay === day}
                                 backendUrl={BACKEND_URL}
+                                onRemovePOIGlobally={handleRemovePOIGlobally}
                             />
                         ))}
                     </div>
