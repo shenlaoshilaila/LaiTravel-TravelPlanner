@@ -94,16 +94,12 @@ export default function PlannerPage() {
         );
     };
 
-    // ✅ Remove POI globally across all days (cross-date removal)
+    // ✅ Remove POI globally across all days
     const handleRemovePOIGlobally = (poiToRemove: POI) => {
         setDayPOIs((prev) =>
             prev.map((day) => ({
                 ...day,
-                pois: day.pois.filter(
-                    (p) =>
-                        p.name.trim().toLowerCase() !==
-                        poiToRemove.name.trim().toLowerCase()
-                ),
+                pois: day.pois.filter((p) => p.name !== poiToRemove.name),
             }))
         );
     };
@@ -274,7 +270,6 @@ export default function PlannerPage() {
                                     onCityChange={handleCityChange}
                                     isActive={selectedDay === day}
                                     backendUrl={BACKEND_URL}
-                                    // 👇 global delete callback
                                     onRemovePOIGlobally={handleRemovePOIGlobally}
                                 />
                             ))}
