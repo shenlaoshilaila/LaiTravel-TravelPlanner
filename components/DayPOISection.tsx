@@ -34,16 +34,15 @@ export default function DayPOISection({
     const [pois, setPois] = useState<POI[]>(initialPois || []);
     const [distances, setDistances] = useState<Record<number, DistanceInfo>>({});
     const cityInputRef = useRef<HTMLInputElement | null>(null);
+    const [dragIndex, setDragIndex] = useState<number | null>(null);
 
-    // ✅ Setup Google Places Autocomplete for city input
+    // ✅ Setup Google Places Autocomplete
     useEffect(() => {
         if (!(window as any).google || !cityInputRef.current) return;
-
         const autocomplete = new google.maps.places.Autocomplete(cityInputRef.current, {
             types: ["(cities)"],
             fields: ["formatted_address", "geometry", "name"],
         });
-
         autocomplete.addListener("place_changed", () => {
             const place = autocomplete.getPlace();
             if (place?.formatted_address) {
@@ -54,7 +53,7 @@ export default function DayPOISection({
         });
     }, [day, onCityChange]);
 
-    // ✅ Keep input text in sync with prop (important for first AI load)
+    // ✅ Sync input with prop
     useEffect(() => {
         if (cityInputRef.current && city) {
             cityInputRef.current.value = city;
@@ -75,10 +74,24 @@ export default function DayPOISection({
         onUpdatePois(day, updated);
     };
 
-    // ✅ Compute distances between consecutive POIs
+    // ✅ Handle reorder
+    const handleDragStart = (index: number) => {
+        setDragIndex(index);
+    };
+
+    const handleDrop = (index: number) => {
+        if (dragIndex === null) return;
+        const updated = [...pois];
+        const [movedItem] = updated.splice(dragIndex, 1);
+        updated.splice(index, 0, movedItem);
+        setPois(updated);
+        onUpdatePois(day, updated);
+        setDragIndex(null);
+    };
+
+    // ✅ Compute distances between POIs
     useEffect(() => {
         if (!(window as any).google || pois.length < 2) return;
-
         const service = new google.maps.DistanceMatrixService();
 
         pois.forEach((p, i) => {
@@ -98,7 +111,6 @@ export default function DayPOISection({
                 ) {
                     const el = res.rows[0].elements[0];
                     const text = `${el.distance.text} (${el.duration.text})`;
-
                     setDistances((prev) => ({
                         ...prev,
                         [i]: {
@@ -111,24 +123,17 @@ export default function DayPOISection({
                 }
             };
 
-            // Driving
-            service.getDistanceMatrix(
-                {
-                    origins: [origin],
-                    destinations: [destination],
-                    travelMode: google.maps.TravelMode.DRIVING,
-                },
-                (res, status) => handleResult(res, status, "driving")
-            );
-
-            // Walking
-            service.getDistanceMatrix(
-                {
-                    origins: [origin],
-                    destinations: [destination],
-                    travelMode: google.maps.TravelMode.WALKING,
-                },
-                (res, status) => handleResult(res, status, "walking")
+            // Driving + Walking
+            ["DRIVING", "WALKING"].forEach((mode) =>
+                service.getDistanceMatrix(
+                    {
+                        origins: [origin],
+                        destinations: [destination],
+                        travelMode: google.maps.TravelMode[mode],
+                    },
+                    (res, status) =>
+                        handleResult(res, status, mode.toLowerCase() as "driving" | "walking")
+                )
             );
         });
     }, [pois]);
@@ -149,7 +154,7 @@ export default function DayPOISection({
                 </h2>
             </div>
 
-            {/* ✅ City Input — controlled and synced */}
+            {/* City Input */}
             <div className="mt-3">
                 <label className="block text-sm font-medium mb-1">City</label>
                 <input
@@ -157,13 +162,13 @@ export default function DayPOISection({
                     type="text"
                     value={city}
                     onChange={(e) => onCityChange(day, e.target.value)}
-                    onFocus={(e) => e.target.select()} // 💡 auto-select text for quick editing
+                    onFocus={(e) => e.target.select()}
                     placeholder="Type a city..."
                     className="border px-3 py-2 rounded w-full"
                 />
             </div>
 
-            {/* ✅ POI Search */}
+            {/* POI Search */}
             <div className="mt-4">
                 <SearchPOI
                     city={city}
@@ -172,30 +177,30 @@ export default function DayPOISection({
                 />
             </div>
 
-            {/* ✅ POI List */}
+            {/* POI List (now draggable) */}
             <div className="mt-4 space-y-2">
                 {pois.length > 0 ? (
                     pois.map((poi, i) => (
-                        <div key={i}>
-                            <div className="border p-3 rounded flex justify-between items-center bg-white shadow-sm">
-                                <div>
-                                    <p className="font-bold text-black">{poi.name}</p>
-                                    <p className="text-sm text-gray-700">{poi.address}</p>
-                                </div>
-                                <button
-                                    onClick={() => handleRemovePOI(i)}
-                                    className="text-red-500 hover:text-red-700 font-bold text-lg"
-                                >
-                                    ✕
-                                </button>
+                        <div
+                            key={i}
+                            draggable
+                            onDragStart={() => handleDragStart(i)}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={() => handleDrop(i)}
+                            className={`border p-3 rounded flex justify-between items-center bg-white shadow-sm transition ${
+                                dragIndex === i ? "opacity-50" : "opacity-100"
+                            }`}
+                        >
+                            <div>
+                                <p className="font-bold text-black">{poi.name}</p>
+                                <p className="text-sm text-gray-700">{poi.address}</p>
                             </div>
-
-                            {distances[i] && (
-                                <div className="ml-8 mt-1 text-sm text-gray-600">
-                                    🚗 {distances[i].drivingText || "Loading..."} <br />
-                                    🚶 {distances[i].walkingText || "Loading..."}
-                                </div>
-                            )}
+                            <button
+                                onClick={() => handleRemovePOI(i)}
+                                className="text-red-500 hover:text-red-700 font-bold text-lg"
+                            >
+                                ✕
+                            </button>
                         </div>
                     ))
                 ) : (
