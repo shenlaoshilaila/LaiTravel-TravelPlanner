@@ -16,8 +16,6 @@ type User = { id: string; name?: string } | null;
 
 export default function PlannerPage() {
     const router = useRouter();
-
-    // ---------- STATE ----------
     const [startDate, setStartDate] = useState<string>("");
     const [endDate, setEndDate] = useState<string>("");
     const [dayPOIs, setDayPOIs] = useState<DayPOI[]>([]);
@@ -25,7 +23,7 @@ export default function PlannerPage() {
     const [user, setUser] = useState<User>(null);
     const [errorMsg, setErrorMsg] = useState<string>("");
 
-    // ---------- LAYOUT ----------
+    // Layout
     const [leftWidth, setLeftWidth] = useState(50);
     const handleDrag = (e: MouseEvent) => {
         const newWidth = (e.clientX / window.innerWidth) * 100;
@@ -41,13 +39,11 @@ export default function PlannerPage() {
         window.removeEventListener("mouseup", stopDrag);
     };
 
-    // ---------- AUTH ----------
+    // Auth
     useEffect(() => {
         (async () => {
             try {
-                const r = await fetch(`${BACKEND_URL}/auth/me`, {
-                    credentials: "include",
-                });
+                const r = await fetch(`${BACKEND_URL}/auth/me`, { credentials: "include" });
                 if (r.ok) setUser(await r.json());
             } catch (e) {
                 console.warn("Auth error", e);
@@ -55,7 +51,7 @@ export default function PlannerPage() {
         })();
     }, []);
 
-    // ---------- DATE HANDLING ----------
+    // Handle Dates
     useEffect(() => {
         if (!startDate || !endDate) return;
         const start = new Date(startDate);
@@ -77,24 +73,21 @@ export default function PlannerPage() {
         setSelectedDay(1);
     }, [startDate, endDate]);
 
-    // ---------- HANDLERS ----------
-    const handleCityChange = (day: number, city: string) => {
-        setDayPOIs((prev) =>
-            prev.map((d) => (d.day === day ? { ...d, city } : d))
-        );
-    };
-
+    // Update POIs for specific day
     const updatePOIsForDay = (day: number, newPois: POI[]) => {
         setDayPOIs((prev) =>
             prev.map((d) =>
-                d.day === day
-                    ? { ...d, pois: newPois.map((p, i) => ({ ...p, sequence: i + 1 })) }
-                    : d
+                d.day === day ? { ...d, pois: newPois.map((p, i) => ({ ...p, sequence: i + 1 })) } : d
             )
         );
     };
 
-    // ✅ Remove POI globally across all days
+    // Handle city change
+    const handleCityChange = (day: number, city: string) => {
+        setDayPOIs((prev) => prev.map((d) => (d.day === day ? { ...d, city } : d)));
+    };
+
+    // Remove POI globally
     const handleRemovePOIGlobally = (poiToRemove: POI) => {
         setDayPOIs((prev) =>
             prev.map((day) => ({
@@ -104,41 +97,35 @@ export default function PlannerPage() {
         );
     };
 
-    // ---------- AI PLAN HANDLER ----------
+    // 🔥 FIXED: AI Plan Generation
     const handleAIPlanGenerated = (aiDayPOIs: any[]) => {
         if (!aiDayPOIs || aiDayPOIs.length === 0) return;
 
-        const firstCity = aiDayPOIs[0]?.city?.trim() || "";
-        if (!firstCity.includes(",")) {
-            setErrorMsg(
-                "⚠️ Please include the country name in your query (e.g., 'Tokyo, Japan')."
-            );
-            return;
-        } else {
-            setErrorMsg("");
-        }
+        console.log("🧭 Raw AI Response:", aiDayPOIs);
 
-        // ✅ Convert to structured POIs
-        const converted: DayPOI[] = aiDayPOIs.map((day) => ({
-            ...day,
+        const converted: DayPOI[] = aiDayPOIs.map((day, dayIdx) => ({
+            day: dayIdx + 1,
+            date: day.date || "",
+            city: day.city?.trim() || "",
             pois: (day.pois || []).map((p: any, idx: number) =>
                 typeof p === "string"
                     ? { name: p, sequence: idx + 1 }
-                    : { ...p, sequence: idx + 1 }
+                    : { name: p.name || "", ...p, sequence: idx + 1 }
             ),
         }));
 
-        // ✅ Replace trip plan
+        console.log("✅ Final converted dayPOIs:", converted);
+
         setDayPOIs([]);
         setTimeout(() => {
             setDayPOIs(converted);
             setStartDate(converted[0]?.date || "");
             setEndDate(converted[converted.length - 1]?.date || "");
             setSelectedDay(1);
-        }, 50);
+        }, 100);
     };
 
-    // ---------- MEMOS ----------
+    // Derived data
     const allPois = useMemo(
         () =>
             dayPOIs.flatMap((d) =>
@@ -158,7 +145,6 @@ export default function PlannerPage() {
     const currentCity =
         selectedDay ? dayPOIs.find((d) => d.day === selectedDay)?.city ?? "" : "";
 
-    // ---------- RENDER ----------
     return (
         <main className="flex flex-col max-w-full min-h-screen overflow-hidden bg-white">
             {/* Header */}
@@ -168,9 +154,7 @@ export default function PlannerPage() {
 
             {/* Step 1: Trip Assistant */}
             <div className="p-4 border-b bg-white">
-                <h2 className="text-lg font-semibold mb-2 text-blue-700">
-                    Step 1 · Trip Assistant
-                </h2>
+                <h2 className="text-lg font-semibold mb-2 text-blue-700">Step 1 · Trip Assistant</h2>
                 <p className="text-sm text-gray-600 mb-3">
                     Ask anything — destinations, safety, attractions, or travel advice.
                 </p>
@@ -194,9 +178,8 @@ export default function PlannerPage() {
                     Type the city and country name (for accuracy). Example:
                     <br />
                     <span className="italic text-gray-500">
-            Hangzhou, China 10/1–10/3 (nature & food), Shanghai, China 10/4–10/6
-            (shopping)
-          </span>
+                        Hangzhou, China 10/1–10/3 (nature & food), Shanghai, China 10/4–10/6 (shopping)
+                    </span>
                 </p>
                 <div className="border rounded-lg shadow-sm bg-white p-3">
                     <AIChatPlannerBar onPlanGenerated={handleAIPlanGenerated} />
@@ -220,9 +203,9 @@ export default function PlannerPage() {
                 />
             </div>
 
-            {/* Main Layout */}
+            {/* Main layout */}
             <div className="flex flex-1 w-full">
-                {/* LEFT: Planner Controls */}
+                {/* LEFT: Planner controls */}
                 <div
                     className="p-4 bg-gray-50 flex flex-col"
                     style={{
@@ -231,14 +214,10 @@ export default function PlannerPage() {
                         height: "calc(100vh - 64px)",
                     }}
                 >
-                    {/* Scrollable content */}
                     <div className="flex-1 overflow-y-auto">
-                        {/* Dates */}
                         <div className="flex gap-4 mb-6 sticky top-0 bg-gray-50 pb-2 z-10">
                             <div>
-                                <label className="block text-sm font-medium mb-1">
-                                    Start Date
-                                </label>
+                                <label className="block text-sm font-medium mb-1">Start Date</label>
                                 <input
                                     type="date"
                                     value={startDate}
@@ -247,9 +226,7 @@ export default function PlannerPage() {
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium mb-1">
-                                    End Date
-                                </label>
+                                <label className="block text-sm font-medium mb-1">End Date</label>
                                 <input
                                     type="date"
                                     value={endDate}
@@ -259,19 +236,19 @@ export default function PlannerPage() {
                             </div>
                         </div>
 
-                        {/* DayPOI Sections */}
+                        {/* Render days */}
                         <div className="space-y-6 pb-6">
-                            {dayPOIs.map(({ day, date, city, pois }) => (
+                            {dayPOIs.map((dayObj, idx) => (
                                 <DayPOISection
-                                    key={`${day}-${pois.length}`} // 👈 forces re-render when POIs change
-                                    day={day}
-                                    date={date ?? ""}
-                                    city={city ?? ""}
-                                    initialPois={[...(pois ?? [])]} // 👈 ensures fresh array reference
+                                    key={`${idx}-${JSON.stringify(dayObj.pois)}`}
+                                    day={dayObj.day}
+                                    date={dayObj.date ?? ""}
+                                    city={dayObj.city ?? ""}
+                                    initialPois={[...(dayObj.pois ?? [])]}
                                     onUpdatePois={updatePOIsForDay}
                                     onSelectDay={setSelectedDay}
                                     onCityChange={handleCityChange}
-                                    isActive={selectedDay === day}
+                                    isActive={selectedDay === dayObj.day}
                                     backendUrl={BACKEND_URL}
                                     onRemovePOIGlobally={handleRemovePOIGlobally}
                                 />
@@ -324,12 +301,11 @@ export default function PlannerPage() {
                             onCityResolved={(resolvedCity: string) => {
                                 if (!resolvedCity) return;
                                 setDayPOIs((prev) =>
-                                    prev.map((d) => {
-                                        if (!d.city || d.city === currentCity) {
-                                            return { ...d, city: resolvedCity };
-                                        }
-                                        return d;
-                                    })
+                                    prev.map((d) =>
+                                        !d.city || d.city === currentCity
+                                            ? { ...d, city: resolvedCity }
+                                            : d
+                                    )
                                 );
                             }}
                         />
