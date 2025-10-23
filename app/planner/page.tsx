@@ -94,7 +94,7 @@ export default function PlannerPage() {
         );
     };
 
-    // ✅ NEW: remove a POI globally across all days
+    // ✅ Remove POI globally across all days
     const handleRemovePOIGlobally = (poiToRemove: POI) => {
         setDayPOIs((prev) =>
             prev.map((day) => ({
@@ -157,7 +157,7 @@ export default function PlannerPage() {
 
     // ---------- RENDER ----------
     return (
-        <main className="flex flex-col max-w-full min-h-screen overflow-y-auto bg-white">
+        <main className="flex flex-col max-w-full min-h-screen overflow-hidden bg-white">
             {/* Header */}
             <header className="p-4 border-b bg-blue-50 sticky top-0 z-20 shadow-sm">
                 <h1 className="text-2xl font-bold">Itinerary Planner</h1>
@@ -221,56 +221,63 @@ export default function PlannerPage() {
             <div className="flex flex-1 w-full">
                 {/* LEFT: Planner Controls */}
                 <div
-                    className="p-4 overflow-y-auto bg-gray-50"
+                    className="p-4 bg-gray-50 flex flex-col"
                     style={{
                         width: `${leftWidth}%`,
                         minWidth: "20%",
-                        maxHeight: "calc(100vh - 160px)",
+                        height: "calc(100vh - 64px)", // match map height
                     }}
                 >
-                    {/* Dates */}
-                    <div className="flex gap-4 mb-6">
-                        <div>
-                            <label className="block text-sm font-medium mb-1">Start Date</label>
-                            <input
-                                type="date"
-                                value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
-                                className="border px-3 py-2 rounded"
-                            />
+                    {/* Scrollable content */}
+                    <div className="flex-1 overflow-y-auto">
+                        {/* Dates */}
+                        <div className="flex gap-4 mb-6 sticky top-0 bg-gray-50 pb-2 z-10">
+                            <div>
+                                <label className="block text-sm font-medium mb-1">
+                                    Start Date
+                                </label>
+                                <input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                    className="border px-3 py-2 rounded"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-1">
+                                    End Date
+                                </label>
+                                <input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    className="border px-3 py-2 rounded"
+                                />
+                            </div>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-1">End Date</label>
-                            <input
-                                type="date"
-                                value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
-                                className="border px-3 py-2 rounded"
-                            />
+
+                        {/* DayPOI Sections */}
+                        <div className="space-y-6 pb-6">
+                            {dayPOIs.map(({ day, date, city, pois }) => (
+                                <DayPOISection
+                                    key={day}
+                                    day={day}
+                                    date={date ?? ""}
+                                    city={city ?? ""}
+                                    initialPois={pois}
+                                    onUpdatePois={updatePOIsForDay}
+                                    onSelectDay={setSelectedDay}
+                                    onCityChange={handleCityChange}
+                                    isActive={selectedDay === day}
+                                    backendUrl={BACKEND_URL}
+                                    onRemovePOIGlobally={handleRemovePOIGlobally}
+                                />
+                            ))}
                         </div>
                     </div>
 
-                    {/* DayPOI Sections */}
-                    <div className="space-y-6">
-                        {dayPOIs.map(({ day, date, city, pois }) => (
-                            <DayPOISection
-                                key={day}
-                                day={day}
-                                date={date ?? ""}
-                                city={city ?? ""}
-                                initialPois={pois}
-                                onUpdatePois={updatePOIsForDay}
-                                onSelectDay={setSelectedDay}
-                                onCityChange={handleCityChange}
-                                isActive={selectedDay === day}
-                                backendUrl={BACKEND_URL}
-                                onRemovePOIGlobally={handleRemovePOIGlobally}
-                            />
-                        ))}
-                    </div>
-
-                    {/* Save Button */}
-                    <div className="mt-6">
+                    {/* Fixed Save Button */}
+                    <div className="pt-3 border-t bg-gray-50 sticky bottom-0">
                         {user ? (
                             <SavePlanButton
                                 planData={{ startDate, endDate, pois: allPois }}
@@ -283,7 +290,7 @@ export default function PlannerPage() {
                         ) : (
                             <button
                                 disabled
-                                className="px-4 py-2 bg-gray-300 text-gray-600 rounded cursor-not-allowed"
+                                className="w-full px-4 py-2 bg-gray-300 text-gray-600 rounded cursor-not-allowed"
                             >
                                 Login to Save
                             </button>
@@ -291,7 +298,7 @@ export default function PlannerPage() {
                     </div>
                 </div>
 
-                {/* Drag Divider */}
+                {/* Divider */}
                 <div
                     onMouseDown={startDrag}
                     className="w-2 bg-gray-300 cursor-col-resize hover:bg-gray-400"
@@ -300,16 +307,20 @@ export default function PlannerPage() {
                 {/* RIGHT: Map */}
                 <div
                     className="p-4"
-                    style={{ flexGrow: 1, width: `${100 - leftWidth}%`, minWidth: "20%" }}
+                    style={{
+                        flexGrow: 1,
+                        width: `${100 - leftWidth}%`,
+                        minWidth: "20%",
+                        height: "calc(100vh - 64px)",
+                    }}
                 >
-                    <div className="h-[700px] w-full border rounded shadow">
+                    <div className="h-full w-full border rounded shadow">
                         <PlannerMap
                             city={currentCity}
                             pois={currentDayPois}
                             onCityResolved={(resolvedCity: string) => {
                                 if (!resolvedCity) return;
 
-                                // ✅ Update all matching or empty cities
                                 setDayPOIs((prev) =>
                                     prev.map((d) => {
                                         if (!d.city || d.city === currentCity) {
