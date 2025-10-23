@@ -99,15 +99,46 @@ export default function PlannerPage() {
         setDayPOIs((prev) =>
             prev.map((day) => ({
                 ...day,
-                pois: day.pois.filter(
-                    (p) =>
-                        p.name.trim().toLowerCase() !==
-                        poiToRemove.name.trim().toLowerCase()
-                ),
+                pois: day.pois.filter((p) => p.name !== poiToRemove.name),
             }))
         );
     };
 
+    // ---------- AI PLAN HANDLER ----------
+    const handleAIPlanGenerated = (aiDayPOIs: any[]) => {
+        if (!aiDayPOIs || aiDayPOIs.length === 0) return;
+
+        const firstCity = aiDayPOIs[0]?.city?.trim() || "";
+        if (!firstCity.includes(",")) {
+            setErrorMsg(
+                "⚠️ Please include the country name in your query (e.g., 'Tokyo, Japan')."
+            );
+            return;
+        } else {
+            setErrorMsg("");
+        }
+
+        // ✅ Convert to structured POIs
+        const converted: DayPOI[] = aiDayPOIs.map((day) => ({
+            ...day,
+            pois: (day.pois || []).map((p: any, idx: number) =>
+                typeof p === "string"
+                    ? { name: p, sequence: idx + 1 }
+                    : { ...p, sequence: idx + 1 }
+            ),
+        }));
+
+        // ✅ Replace trip plan
+        setDayPOIs([]);
+        setTimeout(() => {
+            setDayPOIs(converted);
+            setStartDate(converted[0]?.date || "");
+            setEndDate(converted[converted.length - 1]?.date || "");
+            setSelectedDay(1);
+        }, 50);
+    };
+
+    // ---------- MEMOS ----------
     const allPois = useMemo(
         () =>
             dayPOIs.flatMap((d) =>
@@ -126,49 +157,6 @@ export default function PlannerPage() {
         selectedDay ? dayPOIs.find((d) => d.day === selectedDay)?.pois ?? [] : [];
     const currentCity =
         selectedDay ? dayPOIs.find((d) => d.day === selectedDay)?.city ?? "" : "";
-
-    // ---------- AI PLAN HANDLER ----------
-    const handleAIPlanGenerated = (aiDayPOIs: any[]) => {
-        if (!aiDayPOIs || aiDayPOIs.length === 0) return;
-
-        const firstCity = aiDayPOIs[0]?.city?.trim() || "";
-        if (!firstCity.includes(",")) {
-            setErrorMsg(
-                "⚠️ Please include the country name in your query (e.g., 'Tokyo, Japan')."
-            );
-            return;
-        } else {
-            setErrorMsg("");
-        }
-
-        // ✅ Normalize AI response to consistent DayPOI format
-        const normalized: DayPOI[] = aiDayPOIs.map((day, i) => ({
-            day: i + 1,
-            date: day.date || new Date().toISOString().split("T")[0],
-            city: day.city || "",
-            pois: (day.pois || []).map((p: any, idx: number) => {
-                if (typeof p === "string") {
-                    return { name: p, address: "", lat: 0, lng: 0, sequence: idx + 1 };
-                } else {
-                    return {
-                        name: p.name || p,
-                        address: p.address || "",
-                        lat: p.lat || 0,
-                        lng: p.lng || 0,
-                        sequence: idx + 1,
-                    };
-                }
-            }),
-        }));
-
-        // ✅ Set directly (no reset + no timeout)
-        setDayPOIs(normalized);
-
-        // ✅ Auto-select first day + update date range
-        setStartDate(normalized[0]?.date || "");
-        setEndDate(normalized[normalized.length - 1]?.date || "");
-        setSelectedDay(1);
-    };
 
     // ---------- RENDER ----------
     return (
@@ -275,11 +263,11 @@ export default function PlannerPage() {
                         <div className="space-y-6 pb-6">
                             {dayPOIs.map(({ day, date, city, pois }) => (
                                 <DayPOISection
-                                    key={day}
+                                    key={`${day}-${pois.length}`} // 👈 forces re-render when POIs change
                                     day={day}
                                     date={date ?? ""}
                                     city={city ?? ""}
-                                    initialPois={pois}
+                                    initialPois={[...(pois ?? [])]} // 👈 ensures fresh array reference
                                     onUpdatePois={updatePOIsForDay}
                                     onSelectDay={setSelectedDay}
                                     onCityChange={handleCityChange}
@@ -291,7 +279,7 @@ export default function PlannerPage() {
                         </div>
                     </div>
 
-                    {/* Fixed Save Button */}
+                    {/* Save Button */}
                     <div className="pt-3 border-t bg-gray-50 sticky bottom-0">
                         {user ? (
                             <SavePlanButton
@@ -335,7 +323,6 @@ export default function PlannerPage() {
                             pois={currentDayPois}
                             onCityResolved={(resolvedCity: string) => {
                                 if (!resolvedCity) return;
-
                                 setDayPOIs((prev) =>
                                     prev.map((d) => {
                                         if (!d.city || d.city === currentCity) {
