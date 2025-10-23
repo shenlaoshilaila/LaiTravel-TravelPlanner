@@ -17,6 +17,11 @@ interface DayPOISectionProps {
     onRemovePOIGlobally?: (poi: POI) => void;
 }
 
+interface DistanceInfo {
+    drivingText?: string;
+    walkingText?: string;
+}
+
 export default function DayPOISection({
                                           day,
                                           date,
@@ -30,14 +35,16 @@ export default function DayPOISection({
                                           onRemovePOIGlobally,
                                       }: DayPOISectionProps) {
     const [pois, setPois] = useState<POI[]>(initialPois || []);
+    const [distances, setDistances] = useState<Record<number, DistanceInfo>>({});
+    const [dragIndex, setDragIndex] = useState<number | null>(null);
     const cityInputRef = useRef<HTMLInputElement | null>(null);
 
-    // ✅ Keep local pois synced with parent state
+    // ✅ Keep POIs synced with parent updates (AI or manual)
     useEffect(() => {
         setPois(initialPois || []);
     }, [initialPois]);
 
-    // ✅ Google Autocomplete
+    // ✅ Google Places Autocomplete
     useEffect(() => {
         if (!(window as any).google || !cityInputRef.current) return;
         const autocomplete = new google.maps.places.Autocomplete(cityInputRef.current, {
@@ -54,6 +61,13 @@ export default function DayPOISection({
         });
     }, [day, onCityChange]);
 
+    // ✅ Sync input field with prop
+    useEffect(() => {
+        if (cityInputRef.current && city) {
+            cityInputRef.current.value = city;
+        }
+    }, [city]);
+
     // ✅ Add POI
     const handleAddPOI = (poi: POI) => {
         const updated = [...pois, poi];
@@ -67,11 +81,13 @@ export default function DayPOISection({
         const updated = pois.filter((_, i) => i !== index);
         setPois(updated);
         onUpdatePois(day, updated);
-        onRemovePOIGlobally?.(poiToRemove);
+
+        if (onRemovePOIGlobally) {
+            onRemovePOIGlobally(poiToRemove);
+        }
     };
 
-    // ✅ Reorder (drag/drop)
-    const [dragIndex, setDragIndex] = useState<number | null>(null);
+    // ✅ Drag & Drop reorder
     const handleDragStart = (index: number) => setDragIndex(index);
     const handleDrop = (index: number) => {
         if (dragIndex === null) return;
@@ -82,6 +98,54 @@ export default function DayPOISection({
         onUpdatePois(day, updated);
         setDragIndex(null);
     };
+
+    // ✅ Distance calculation
+    useEffect(() => {
+        if (!(window as any).google || pois.length < 2) return;
+
+        const service = new google.maps.DistanceMatrixService();
+        pois.forEach((p, i) => {
+            if (i >= pois.length - 1) return;
+            const origin = { lat: p.lat, lng: p.lng };
+            const destination = { lat: pois[i + 1].lat, lng: pois[i + 1].lng };
+
+            const handleResult = (
+                res: google.maps.DistanceMatrixResponse | null,
+                status: google.maps.DistanceMatrixStatus,
+                mode: "driving" | "walking"
+            ) => {
+                if (status === "OK" && res?.rows?.[0]?.elements?.[0]?.status === "OK") {
+                    const el = res.rows[0].elements[0];
+                    const text = `${el.distance.text} (${el.duration.text})`;
+                    setDistances((prev) => ({
+                        ...prev,
+                        [i]: {
+                            ...prev[i],
+                            ...(mode === "driving"
+                                ? { drivingText: text }
+                                : { walkingText: text }),
+                        },
+                    }));
+                }
+            };
+
+            const modes: { type: google.maps.TravelMode; label: "driving" | "walking" }[] = [
+                { type: google.maps.TravelMode.DRIVING, label: "driving" },
+                { type: google.maps.TravelMode.WALKING, label: "walking" },
+            ];
+
+            modes.forEach(({ type, label }) => {
+                service.getDistanceMatrix(
+                    {
+                        origins: [origin],
+                        destinations: [destination],
+                        travelMode: type,
+                    },
+                    (res, status) => handleResult(res, status, label)
+                );
+            });
+        });
+    }, [pois]);
 
     return (
         <div
@@ -107,6 +171,7 @@ export default function DayPOISection({
                     type="text"
                     value={city}
                     onChange={(e) => onCityChange(day, e.target.value)}
+                    onFocus={(e) => e.target.select()}
                     placeholder="Type a city..."
                     className="border px-3 py-2 rounded w-full"
                 />
@@ -137,7 +202,15 @@ export default function DayPOISection({
                         >
                             <div>
                                 <p className="font-bold text-black">{poi.name}</p>
-                                <p className="text-sm text-gray-700">{poi.address}</p>
+                                {poi.address && (
+                                    <p className="text-sm text-gray-700">{poi.address}</p>
+                                )}
+                                {distances[i] && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        🚗 {distances[i].drivingText} · 🚶{" "}
+                                        {distances[i].walkingText}
+                                    </p>
+                                )}
                             </div>
                             <button
                                 onClick={() => handleRemovePOI(i)}
