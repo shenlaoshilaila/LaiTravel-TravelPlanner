@@ -33,10 +33,10 @@ export default function DayPOISection({
                                       }: DayPOISectionProps) {
     const [pois, setPois] = useState<POI[]>(initialPois || []);
     const [distances, setDistances] = useState<Record<number, DistanceInfo>>({});
-    const cityInputRef = useRef<HTMLInputElement | null>(null);
     const [dragIndex, setDragIndex] = useState<number | null>(null);
+    const cityInputRef = useRef<HTMLInputElement | null>(null);
 
-    // ✅ Setup Google Places Autocomplete
+    // ✅ Google Places Autocomplete
     useEffect(() => {
         if (!(window as any).google || !cityInputRef.current) return;
         const autocomplete = new google.maps.places.Autocomplete(cityInputRef.current, {
@@ -53,7 +53,7 @@ export default function DayPOISection({
         });
     }, [day, onCityChange]);
 
-    // ✅ Sync input with prop
+    // ✅ Keep input synced with prop
     useEffect(() => {
         if (cityInputRef.current && city) {
             cityInputRef.current.value = city;
@@ -74,7 +74,7 @@ export default function DayPOISection({
         onUpdatePois(day, updated);
     };
 
-    // ✅ Handle reorder
+    // ✅ Handle reorder (drag + drop)
     const handleDragStart = (index: number) => {
         setDragIndex(index);
     };
@@ -89,9 +89,10 @@ export default function DayPOISection({
         setDragIndex(null);
     };
 
-    // ✅ Compute distances between POIs
+    // ✅ Compute distances
     useEffect(() => {
         if (!(window as any).google || pois.length < 2) return;
+
         const service = new google.maps.DistanceMatrixService();
 
         pois.forEach((p, i) => {
@@ -111,6 +112,7 @@ export default function DayPOISection({
                 ) {
                     const el = res.rows[0].elements[0];
                     const text = `${el.distance.text} (${el.duration.text})`;
+
                     setDistances((prev) => ({
                         ...prev,
                         [i]: {
@@ -123,18 +125,22 @@ export default function DayPOISection({
                 }
             };
 
-            // Driving + Walking
-            ["DRIVING", "WALKING"].forEach((mode) =>
+            // ✅ DRIVING + WALKING (with proper enum typing)
+            const modes: { type: google.maps.TravelMode; label: "driving" | "walking" }[] = [
+                { type: google.maps.TravelMode.DRIVING, label: "driving" },
+                { type: google.maps.TravelMode.WALKING, label: "walking" },
+            ];
+
+            modes.forEach(({ type, label }) => {
                 service.getDistanceMatrix(
                     {
                         origins: [origin],
                         destinations: [destination],
-                        travelMode: google.maps.TravelMode[mode],
+                        travelMode: type,
                     },
-                    (res, status) =>
-                        handleResult(res, status, mode.toLowerCase() as "driving" | "walking")
-                )
-            );
+                    (res, status) => handleResult(res, status, label)
+                );
+            });
         });
     }, [pois]);
 
@@ -154,7 +160,7 @@ export default function DayPOISection({
                 </h2>
             </div>
 
-            {/* City Input */}
+            {/* ✅ City Input */}
             <div className="mt-3">
                 <label className="block text-sm font-medium mb-1">City</label>
                 <input
@@ -168,7 +174,7 @@ export default function DayPOISection({
                 />
             </div>
 
-            {/* POI Search */}
+            {/* ✅ POI Search */}
             <div className="mt-4">
                 <SearchPOI
                     city={city}
@@ -177,7 +183,7 @@ export default function DayPOISection({
                 />
             </div>
 
-            {/* POI List (now draggable) */}
+            {/* ✅ POI List (draggable) */}
             <div className="mt-4 space-y-2">
                 {pois.length > 0 ? (
                     pois.map((poi, i) => (
