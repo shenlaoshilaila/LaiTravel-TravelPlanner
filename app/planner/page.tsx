@@ -94,7 +94,7 @@ export default function PlannerPage() {
         );
     };
 
-    // ✅ Remove POI globally across all days (cross-date delete)
+    // ✅ Global removal across all days
     const handleRemovePOIGlobally = (poiToRemove: POI) => {
         setDayPOIs((prev) =>
             prev.map((day) => ({
@@ -141,20 +141,29 @@ export default function PlannerPage() {
             setErrorMsg("");
         }
 
-        const converted: DayPOI[] = aiDayPOIs.map((day) => ({
+        // ✅ Convert all POIs into structured objects
+        const normalized: DayPOI[] = aiDayPOIs.map((day) => ({
             ...day,
-            pois: (day.pois || []).map((p: any, idx: number) =>
-                typeof p === "string"
-                    ? { name: p, sequence: idx + 1 }
-                    : { ...p, sequence: idx + 1 }
-            ),
+            pois: (day.pois || []).map((p: any, idx: number) => {
+                if (typeof p === "string") {
+                    return { name: p, address: "", lat: 0, lng: 0, sequence: idx + 1 };
+                } else {
+                    return {
+                        name: p.name || p,
+                        address: p.address || "",
+                        lat: p.lat || 0,
+                        lng: p.lng || 0,
+                        sequence: idx + 1,
+                    };
+                }
+            }),
         }));
 
         setDayPOIs([]);
         setTimeout(() => {
-            setDayPOIs(converted);
-            setStartDate(converted[0]?.date || "");
-            setEndDate(converted[converted.length - 1]?.date || "");
+            setDayPOIs(normalized);
+            setStartDate(normalized[0]?.date || "");
+            setEndDate(normalized[normalized.length - 1]?.date || "");
             setSelectedDay(1);
         }, 50);
     };
@@ -229,7 +238,7 @@ export default function PlannerPage() {
                     style={{
                         width: `${leftWidth}%`,
                         minWidth: "20%",
-                        height: "calc(100vh - 64px)", // match map height
+                        height: "calc(100vh - 64px)",
                     }}
                 >
                     {/* Scrollable content */}
