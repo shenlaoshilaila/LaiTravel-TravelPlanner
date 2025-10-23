@@ -94,12 +94,16 @@ export default function PlannerPage() {
         );
     };
 
-    // ✅ Remove POI globally across all days
+    // ✅ Remove POI globally across all days (cross-date delete)
     const handleRemovePOIGlobally = (poiToRemove: POI) => {
         setDayPOIs((prev) =>
             prev.map((day) => ({
                 ...day,
-                pois: day.pois.filter((p) => p.name !== poiToRemove.name),
+                pois: day.pois.filter(
+                    (p) =>
+                        p.name.trim().toLowerCase() !==
+                        poiToRemove.name.trim().toLowerCase()
+                ),
             }))
         );
     };
@@ -191,9 +195,9 @@ export default function PlannerPage() {
                     Type the city and country name (for accuracy). Example:
                     <br />
                     <span className="italic text-gray-500">
-                        Hangzhou, China 10/1–10/3 (nature & food), Shanghai, China 10/4–10/6
-                        (shopping)
-                    </span>
+            Hangzhou, China 10/1–10/3 (nature & food), Shanghai, China 10/4–10/6
+            (shopping)
+          </span>
                 </p>
                 <div className="border rounded-lg shadow-sm bg-white p-3">
                     <AIChatPlannerBar onPlanGenerated={handleAIPlanGenerated} />

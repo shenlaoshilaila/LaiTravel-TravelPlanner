@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useEffect, useRef, useState } from "react";
 import SearchPOI from "./SearchPOI";
 import { POI } from "./types";
@@ -13,11 +14,7 @@ interface DayPOISectionProps {
     onUpdatePois: (day: number, pois: POI[]) => void;
     onCityChange: (day: number, city: string) => void;
     backendUrl: string;
-}
-
-interface DistanceInfo {
-    drivingText?: string;
-    walkingText?: string;
+    onRemovePOIGlobally?: (poi: POI) => void;
 }
 
 export default function DayPOISection({
@@ -30,13 +27,17 @@ export default function DayPOISection({
                                           onUpdatePois,
                                           onCityChange,
                                           backendUrl,
+                                          onRemovePOIGlobally,
                                       }: DayPOISectionProps) {
     const [pois, setPois] = useState<POI[]>(initialPois || []);
-    const [distances, setDistances] = useState<Record<number, DistanceInfo>>({});
-    const [dragIndex, setDragIndex] = useState<number | null>(null);
     const cityInputRef = useRef<HTMLInputElement | null>(null);
 
-    // ✅ Google Places Autocomplete
+    // ✅ Keep local pois synced with parent state
+    useEffect(() => {
+        setPois(initialPois || []);
+    }, [initialPois]);
+
+    // ✅ Google Autocomplete
     useEffect(() => {
         if (!(window as any).google || !cityInputRef.current) return;
         const autocomplete = new google.maps.places.Autocomplete(cityInputRef.current, {
@@ -53,13 +54,6 @@ export default function DayPOISection({
         });
     }, [day, onCityChange]);
 
-    // ✅ Keep input synced with prop
-    useEffect(() => {
-        if (cityInputRef.current && city) {
-            cityInputRef.current.value = city;
-        }
-    }, [city]);
-
     // ✅ Add POI
     const handleAddPOI = (poi: POI) => {
         const updated = [...pois, poi];
@@ -67,82 +61,27 @@ export default function DayPOISection({
         onUpdatePois(day, updated);
     };
 
-    // ✅ Remove POI
+    // ✅ Remove POI (local + global)
     const handleRemovePOI = (index: number) => {
+        const poiToRemove = pois[index];
         const updated = pois.filter((_, i) => i !== index);
         setPois(updated);
         onUpdatePois(day, updated);
+        onRemovePOIGlobally?.(poiToRemove);
     };
 
-    // ✅ Handle reorder (drag + drop)
-    const handleDragStart = (index: number) => {
-        setDragIndex(index);
-    };
-
+    // ✅ Reorder (drag/drop)
+    const [dragIndex, setDragIndex] = useState<number | null>(null);
+    const handleDragStart = (index: number) => setDragIndex(index);
     const handleDrop = (index: number) => {
         if (dragIndex === null) return;
         const updated = [...pois];
-        const [movedItem] = updated.splice(dragIndex, 1);
-        updated.splice(index, 0, movedItem);
+        const [moved] = updated.splice(dragIndex, 1);
+        updated.splice(index, 0, moved);
         setPois(updated);
         onUpdatePois(day, updated);
         setDragIndex(null);
     };
-
-    // ✅ Compute distances
-    useEffect(() => {
-        if (!(window as any).google || pois.length < 2) return;
-
-        const service = new google.maps.DistanceMatrixService();
-
-        pois.forEach((p, i) => {
-            if (i >= pois.length - 1) return;
-            const origin = { lat: p.lat, lng: p.lng };
-            const destination = { lat: pois[i + 1].lat, lng: pois[i + 1].lng };
-
-            const handleResult = (
-                res: google.maps.DistanceMatrixResponse | null,
-                status: google.maps.DistanceMatrixStatus,
-                mode: "driving" | "walking"
-            ) => {
-                if (
-                    status === "OK" &&
-                    res &&
-                    res.rows?.[0]?.elements?.[0]?.status === "OK"
-                ) {
-                    const el = res.rows[0].elements[0];
-                    const text = `${el.distance.text} (${el.duration.text})`;
-
-                    setDistances((prev) => ({
-                        ...prev,
-                        [i]: {
-                            ...prev[i],
-                            ...(mode === "driving"
-                                ? { drivingText: text }
-                                : { walkingText: text }),
-                        },
-                    }));
-                }
-            };
-
-            // ✅ DRIVING + WALKING (with proper enum typing)
-            const modes: { type: google.maps.TravelMode; label: "driving" | "walking" }[] = [
-                { type: google.maps.TravelMode.DRIVING, label: "driving" },
-                { type: google.maps.TravelMode.WALKING, label: "walking" },
-            ];
-
-            modes.forEach(({ type, label }) => {
-                service.getDistanceMatrix(
-                    {
-                        origins: [origin],
-                        destinations: [destination],
-                        travelMode: type,
-                    },
-                    (res, status) => handleResult(res, status, label)
-                );
-            });
-        });
-    }, [pois]);
 
     return (
         <div
@@ -168,7 +107,6 @@ export default function DayPOISection({
                     type="text"
                     value={city}
                     onChange={(e) => onCityChange(day, e.target.value)}
-                    onFocus={(e) => e.target.select()}
                     placeholder="Type a city..."
                     className="border px-3 py-2 rounded w-full"
                 />
@@ -183,7 +121,7 @@ export default function DayPOISection({
                 />
             </div>
 
-            {/* ✅ POI List (draggable) */}
+            {/* ✅ POI List */}
             <div className="mt-4 space-y-2">
                 {pois.length > 0 ? (
                     pois.map((poi, i) => (
@@ -210,7 +148,9 @@ export default function DayPOISection({
                         </div>
                     ))
                 ) : (
-                    <p className="text-gray-500 italic">No POIs added for this day yet.</p>
+                    <p className="text-gray-500 italic">
+                        No POIs added for this day yet.
+                    </p>
                 )}
             </div>
         </div>
