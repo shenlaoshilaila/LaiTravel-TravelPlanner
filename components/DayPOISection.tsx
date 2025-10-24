@@ -22,6 +22,13 @@ interface DistanceInfo {
     walkingText?: string;
 }
 
+// Add Google Maps type declarations
+declare global {
+    interface Window {
+        google: typeof google;
+    }
+}
+
 export default function DayPOISection({
                                           day,
                                           date,
@@ -39,16 +46,37 @@ export default function DayPOISection({
     const [dragIndex, setDragIndex] = useState<number | null>(null);
     const cityInputRef = useRef<HTMLInputElement | null>(null);
 
-    // ✅ Sync local POIs with parent updates (AI or manual)
+    // ✅ Debug: Check what data we're receiving
     useEffect(() => {
+        console.log(`Day ${day} - Received initialPois:`, initialPois);
+        console.log(`Day ${day} - Current local pois:`, pois);
+    }, [initialPois, day]);
+
+    // ✅ Fix the sync issue - use a more reliable approach
+    useEffect(() => {
+        console.log(`Day ${day} - Sync: initialPois`, initialPois);
+
         if (initialPois && Array.isArray(initialPois)) {
-            setPois([...initialPois]);
+            // Deep comparison to avoid unnecessary updates
+            const currentPoisString = JSON.stringify(pois);
+            const newPoisString = JSON.stringify(initialPois);
+
+            if (currentPoisString !== newPoisString) {
+                console.log(`Day ${day} - Actually updating POIs`);
+                setPois([...initialPois]);
+            }
+        } else if (!initialPois && pois.length > 0) {
+            // Clear if initialPois becomes empty
+            setPois([]);
+        } else if (!initialPois) {
+            // Ensure we always have an array
+            setPois([]);
         }
-    }, [JSON.stringify(initialPois)]); // force update when POI data changes
+    }, [initialPois, day]);
 
     // ✅ Google Places Autocomplete for city input
     useEffect(() => {
-        if (!(window as any).google || !cityInputRef.current) return;
+        if (!window.google || !cityInputRef.current) return;
         const autocomplete = new google.maps.places.Autocomplete(cityInputRef.current, {
             types: ["(cities)"],
             fields: ["formatted_address", "geometry", "name"],
@@ -103,52 +131,69 @@ export default function DayPOISection({
 
     // ✅ Compute distances between consecutive POIs
     useEffect(() => {
-        if (!(window as any).google || pois.length < 2) return;
+        if (!window.google || pois.length < 2) return;
 
         const service = new google.maps.DistanceMatrixService();
+        const newDistances: Record<number, DistanceInfo> = {};
 
-        pois.forEach((p, i) => {
-            if (i >= pois.length - 1) return;
-            const origin = { lat: p.lat, lng: p.lng };
-            const destination = { lat: pois[i + 1].lat, lng: pois[i + 1].lng };
+        const calculateDistances = async () => {
+            for (let i = 0; i < pois.length - 1; i++) {
+                const origin = { lat: pois[i].lat || 0, lng: pois[i].lng || 0 };
+                const destination = { lat: pois[i + 1].lat || 0, lng: pois[i + 1].lng || 0 };
 
-            const handleResult = (
-                res: google.maps.DistanceMatrixResponse | null,
-                status: google.maps.DistanceMatrixStatus,
-                mode: "driving" | "walking"
-            ) => {
-                if (status === "OK" && res?.rows?.[0]?.elements?.[0]?.status === "OK") {
-                    const el = res.rows[0].elements[0];
-                    const text = `${el.distance.text} (${el.duration.text})`;
-                    setDistances((prev) => ({
-                        ...prev,
-                        [i]: {
-                            ...prev[i],
-                            ...(mode === "driving"
-                                ? { drivingText: text }
-                                : { walkingText: text }),
-                        },
-                    }));
+                // Skip if coordinates are invalid
+                if (origin.lat === 0 && origin.lng === 0) continue;
+                if (destination.lat === 0 && destination.lng === 0) continue;
+
+                try {
+                    const [drivingResult, walkingResult] = await Promise.all([
+                        new Promise<google.maps.DistanceMatrixResponse | null>((resolve) => {
+                            service.getDistanceMatrix(
+                                {
+                                    origins: [origin],
+                                    destinations: [destination],
+                                    travelMode: google.maps.TravelMode.DRIVING,
+                                },
+                                resolve
+                            );
+                        }),
+                        new Promise<google.maps.DistanceMatrixResponse | null>((resolve) => {
+                            service.getDistanceMatrix(
+                                {
+                                    origins: [origin],
+                                    destinations: [destination],
+                                    travelMode: google.maps.TravelMode.WALKING,
+                                },
+                                resolve
+                            );
+                        }),
+                    ]);
+
+                    const drivingElement = drivingResult?.rows[0]?.elements[0];
+                    const walkingElement = walkingResult?.rows[0]?.elements[0];
+
+                    newDistances[i] = {
+                        drivingText: drivingElement?.status === "OK"
+                            ? `${drivingElement.distance.text} (${drivingElement.duration.text})`
+                            : "N/A",
+                        walkingText: walkingElement?.status === "OK"
+                            ? `${walkingElement.distance.text} (${walkingElement.duration.text})`
+                            : "N/A",
+                    };
+                } catch (error) {
+                    console.error(`Failed to calculate distance between POIs ${i} and ${i + 1}:`, error);
+                    newDistances[i] = { drivingText: "Error", walkingText: "Error" };
                 }
-            };
+            }
 
-            const modes: { type: google.maps.TravelMode; label: "driving" | "walking" }[] = [
-                { type: google.maps.TravelMode.DRIVING, label: "driving" },
-                { type: google.maps.TravelMode.WALKING, label: "walking" },
-            ];
+            setDistances(newDistances);
+        };
 
-            modes.forEach(({ type, label }) => {
-                service.getDistanceMatrix(
-                    {
-                        origins: [origin],
-                        destinations: [destination],
-                        travelMode: type,
-                    },
-                    (res, status) => handleResult(res, status, label)
-                );
-            });
-        });
+        calculateDistances();
     }, [pois]);
+
+    // Handle empty states
+    const displayPois = Array.isArray(pois) ? pois : [];
 
     return (
         <div
@@ -194,29 +239,38 @@ export default function DayPOISection({
 
             {/* POI List */}
             <div className="mt-4 space-y-2">
-                {pois.length > 0 ? (
-                    pois.map((poi, i) => (
+                {displayPois.length > 0 ? (
+                    displayPois.map((poi, i) => (
                         <div
                             key={`${poi.name}-${i}`}
                             draggable
                             onDragStart={() => handleDragStart(i)}
-                            onDragOver={(e) => e.preventDefault()}
+                            onDragOver={(e) => {
+                                e.preventDefault();
+                                e.currentTarget.classList.add('bg-blue-100');
+                            }}
+                            onDragLeave={(e) => {
+                                e.currentTarget.classList.remove('bg-blue-100');
+                            }}
                             onDrop={() => handleDrop(i)}
-                            className={`border p-3 rounded flex justify-between items-center bg-white shadow-sm transition ${
-                                dragIndex === i ? "opacity-50" : "opacity-100"
+                            className={`border p-3 rounded flex justify-between items-center bg-white shadow-sm transition-all cursor-move ${
+                                dragIndex === i ? 'opacity-50 border-blue-400' : 'opacity-100 border-gray-300'
                             }`}
                         >
-                            <div>
-                                <p className="font-bold text-black">{poi.name}</p>
-                                {poi.address && (
-                                    <p className="text-sm text-gray-700">{poi.address}</p>
-                                )}
-                                {distances[i] && (
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        🚗 {distances[i].drivingText} · 🚶{" "}
-                                        {distances[i].walkingText}
-                                    </p>
-                                )}
+                            <div className="flex items-center space-x-2">
+                                <span className="text-gray-400">⠿</span>
+                                <div>
+                                    <p className="font-bold text-black">{poi.name}</p>
+                                    {poi.address && (
+                                        <p className="text-sm text-gray-700">{poi.address}</p>
+                                    )}
+                                    {distances[i] && (
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            🚗 {distances[i].drivingText} · 🚶{" "}
+                                            {distances[i].walkingText}
+                                        </p>
+                                    )}
+                                </div>
                             </div>
                             <button
                                 onClick={() => handleRemovePOI(i)}

@@ -43,3 +43,63 @@ export interface SavePlanButtonProps {
     planData: PlanData;
     onPlanSaved?: (saved: PlanSavedResponse) => void;
 }
+
+// ✅ Props for DayPOISection component
+export interface DayPOISectionProps {
+    day: number;
+    date: string;
+    city: string;
+    initialPois: POI[];
+    isActive: boolean;
+    onSelectDay: (day: number) => void;
+    onUpdatePois: (day: number, pois: POI[]) => void;
+    onCityChange: (day: number, city: string) => void;
+    backendUrl: string;
+    onRemovePOIGlobally?: (poi: POI) => void;
+}
+
+// ✅ Props for AIChatPlannerBar component
+export interface AIChatPlannerBarProps {
+    onPlanGenerated: (data: DayPOI[]) => void;
+}
+
+// ✅ Distance information for POI routing
+export interface DistanceInfo {
+    drivingText?: string;
+    walkingText?: string;
+}
+
+// ✅ User type for authentication
+export interface User {
+    id: string;
+    name?: string;
+}
+
+// ✅ Props for PlannerMap component
+export interface PlannerMapProps {
+    city: string;
+    pois: POI[];
+    onCityResolved?: (resolvedCity: string) => void;
+}
+
+// ✅ Props for SearchPOI component
+export interface SearchPOIProps {
+    city: string;
+    onPick: (poi: POI) => void;
+    placeholder?: string;
+}
+
+// ✅ Props for FlightDateExtractor component
+export interface FlightDateExtractorProps {
+    onSelect: (startDate: string, endDate: string) => void;
+    onReset: () => void;
+}
+
+// ✅ Props for AIChatBar component
+export interface AIChatBarProps {
+    city: string;
+    days: number;
+    selectedDay: number | null;
+    dayPOIs: DayPOI[];
+    embedMode?: boolean;
+}

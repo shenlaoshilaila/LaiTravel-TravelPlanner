@@ -24,16 +24,33 @@ export default function AIChatPlannerBar({ onPlanGenerated }: AIChatPlannerBarPr
             });
 
             const data = await res.json();
-            console.log("🧭 AI itinerary response:", data);
+            console.log("🧭 RAW AI itinerary response:", data);
 
-            if (data.dayPOIs) {
+            // ✅ FIX: Handle different response structures
+            let dayPOIs = data.dayPOIs || data.days || data.itinerary || data.data;
+
+            // If it's a string, try to parse it
+            if (typeof dayPOIs === 'string') {
+                try {
+                    dayPOIs = JSON.parse(dayPOIs);
+                } catch (e) {
+                    console.error("Failed to parse AI response:", e);
+                }
+            }
+
+            console.log("✅ Processed dayPOIs:", dayPOIs);
+
+            if (dayPOIs && Array.isArray(dayPOIs) && dayPOIs.length > 0) {
                 // ✅ Pass structured POIs to PlannerPage
-                onPlanGenerated(data.dayPOIs);
-                setReply("✅ I've filled your planner with suggested POIs for each day!");
+                onPlanGenerated(dayPOIs);
+                setReply(`✅ I've filled your planner with ${dayPOIs.length} days of activities!`);
             } else if (data.error) {
                 setReply("⚠️ " + data.error);
+            } else if (data.message) {
+                setReply("⚠️ " + data.message);
             } else {
-                setReply("⚠️ Unexpected response from AI.");
+                setReply("⚠️ Could not generate itinerary from the AI response.");
+                console.warn("Unexpected AI response structure:", data);
             }
         } catch (err) {
             console.error("AIChatPlannerBar error:", err);
@@ -50,19 +67,28 @@ export default function AIChatPlannerBar({ onPlanGenerated }: AIChatPlannerBarPr
             </label>
             <input
                 type="text"
-                placeholder="e.g. Hangzhou, China 10/3–10/4"
+                placeholder="e.g. Hangzhou, China 10/3–10/5 (nature & temples), Shanghai 10/6–10/8 (shopping & museums)"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 className="border px-3 py-2 rounded w-full"
+                onKeyPress={(e) => {
+                    if (e.key === 'Enter') handleAskAI();
+                }}
             />
             <button
                 onClick={handleAskAI}
-                disabled={loading}
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                disabled={loading || !query.trim()}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-                {loading ? "Loading..." : "Ask AI"}
+                {loading ? "Generating Itinerary..." : "Auto-Fill with AI"}
             </button>
-            {reply && <p className="text-sm text-gray-700 mt-2">{reply}</p>}
+            {reply && (
+                <p className={`text-sm mt-2 ${
+                    reply.includes("✅") ? "text-green-700" : "text-red-700"
+                }`}>
+                    {reply}
+                </p>
+            )}
         </div>
     );
 }
