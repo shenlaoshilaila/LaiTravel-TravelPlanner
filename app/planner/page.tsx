@@ -21,7 +21,6 @@ export default function PlannerPage() {
     const [dayPOIs, setDayPOIs] = useState<DayPOI[]>([]);
     const [selectedDay, setSelectedDay] = useState<number | null>(1);
     const [user, setUser] = useState<User>(null);
-    const [errorMsg, setErrorMsg] = useState<string>("");
 
     // Layout
     const [leftWidth, setLeftWidth] = useState(50);
@@ -75,6 +74,7 @@ export default function PlannerPage() {
 
     // Update POIs for specific day
     const updatePOIsForDay = (day: number, newPois: POI[]) => {
+        console.log(`🔄 Parent: Updating Day ${day} with`, newPois);
         setDayPOIs((prev) =>
             prev.map((d) =>
                 d.day === day ? { ...d, pois: newPois.map((p, i) => ({ ...p, sequence: i + 1 })) } : d
@@ -97,33 +97,71 @@ export default function PlannerPage() {
         );
     };
 
-    // 🔥 FIXED: AI Plan Generation
+    // 🔥 FIXED: AI Plan Generation - Handle "pols" typo and convert string POIs
     const handleAIPlanGenerated = (aiDayPOIs: any[]) => {
-        if (!aiDayPOIs || aiDayPOIs.length === 0) return;
+        if (!aiDayPOIs || aiDayPOIs.length === 0) {
+            console.error("❌ AI returned empty dayPOIs");
+            return;
+        }
 
         console.log("🧭 Raw AI Response:", aiDayPOIs);
 
-        const converted: DayPOI[] = aiDayPOIs.map((day, dayIdx) => ({
-            day: dayIdx + 1,
-            date: day.date || "",
-            city: day.city?.trim() || "",
-            pois: (day.pois || []).map((p: any, idx: number) =>
-                typeof p === "string"
-                    ? { name: p, sequence: idx + 1 }
-                    : { name: p.name || "", ...p, sequence: idx + 1 }
-            ),
-        }));
+        try {
+            const converted: DayPOI[] = aiDayPOIs.map((day, dayIdx) => {
+                const safeDay = day || {};
 
-        console.log("✅ Final converted dayPOIs:", converted);
+                // ✅ FIX: Handle "pols" typo in the AI response
+                const poisArray = safeDay.pois || safeDay.pols || [];
 
-        setDayPOIs([]);
-        setTimeout(() => {
+                console.log(`Day ${dayIdx + 1} POIs field:`, {
+                    hasPois: !!safeDay.pois,
+                    hasPols: !!safeDay.pols,
+                    finalPoisCount: poisArray.length
+                });
+
+                return {
+                    day: dayIdx + 1,
+                    date: safeDay.date || "",
+                    city: String(safeDay.city || "").trim(),
+                    pois: (Array.isArray(poisArray) ? poisArray : []).map((p: any, idx: number) => {
+                        if (typeof p === "string") {
+                            return {
+                                name: p.trim(),
+                                address: "",
+                                lat: 0,
+                                lng: 0,
+                                sequence: idx + 1
+                            };
+                        }
+                        return {
+                            name: String(p.name || "").trim(),
+                            address: p.address || "",
+                            lat: p.lat || 0,
+                            lng: p.lng || 0,
+                            sequence: idx + 1,
+                            ...p
+                        };
+                    }),
+                };
+            });
+
+            console.log("✅ Final converted dayPOIs:", converted);
+
+            // ✅ FIXED: Type-safe state updates - ensure only strings are passed
             setDayPOIs(converted);
             setStartDate(converted[0]?.date || "");
             setEndDate(converted[converted.length - 1]?.date || "");
             setSelectedDay(1);
-        }, 100);
+
+        } catch (error) {
+            console.error("❌ Error processing AI response:", error);
+        }
     };
+
+    // Debug state changes
+    useEffect(() => {
+        console.log("📊 Parent dayPOIs state:", dayPOIs);
+    }, [dayPOIs]);
 
     // Derived data
     const allPois = useMemo(
@@ -184,9 +222,6 @@ export default function PlannerPage() {
                 <div className="border rounded-lg shadow-sm bg-white p-3">
                     <AIChatPlannerBar onPlanGenerated={handleAIPlanGenerated} />
                 </div>
-                {errorMsg && (
-                    <p className="text-red-600 text-sm mt-2 font-medium">{errorMsg}</p>
-                )}
             </div>
 
             {/* Step 3: Flight Date Extractor */}
@@ -240,7 +275,7 @@ export default function PlannerPage() {
                         <div className="space-y-6 pb-6">
                             {dayPOIs.map((dayObj, idx) => (
                                 <DayPOISection
-                                    key={`${idx}-${JSON.stringify(dayObj.pois)}`}
+                                    key={`day-${dayObj.day}-${dayObj.date}`}
                                     day={dayObj.day}
                                     date={dayObj.date ?? ""}
                                     city={dayObj.city ?? ""}

@@ -24,7 +24,13 @@ export default function AIChatPlannerBar({ onPlanGenerated }: AIChatPlannerBarPr
             });
 
             const data = await res.json();
-            console.log("🧭 RAW AI itinerary response:", data);
+            console.log("🧭 COMPLETE AI itinerary response:", data);
+            console.log("🧭 Response keys:", Object.keys(data));
+
+            if (data.dayPOIs) {
+                console.log("🧭 First day structure:", data.dayPOIs[0]);
+                console.log("🧭 First day keys:", data.dayPOIs[0] ? Object.keys(data.dayPOIs[0]) : 'no days');
+            }
 
             // ✅ FIX: Handle different response structures
             let dayPOIs = data.dayPOIs || data.days || data.itinerary || data.data;
