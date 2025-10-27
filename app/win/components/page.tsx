@@ -150,30 +150,39 @@ export default function ComponentsGamePage() {
 
             {/* 🌿 Connection Lines */}
             {/* Line: Root → Left */}
-            <div
-                className="absolute bg-blue-300"
-                style={{
-                    width: "3px",
-                    height: "100px",
-                    top: "380px",
-                    left: "860px",
-                    transform: "rotate(130deg)",
-                    transformOrigin: "top left",
-                }}
-            />
+            {/* 🌿 Connection Lines — visible only when game starts */}
+            {gameStarted && (
+                <>
+                    {/* Line: Root → Left */}
+                    <div
+                        className="absolute bg-blue-300"
+                        style={{
+                            width: "4px",
+                            height: "100px",
+                            top: "380px",
+                            left: "860px",
+                            transform: "rotate(130deg)",
+                            transformOrigin: "top left",
+                            borderRadius: "2px",
+                        }}
+                    />
 
-            {/* Line: Root → Right */}
-            <div
-                className="absolute bg-blue-300"
-                style={{
-                    width: "3px",
-                    height: "100px",
-                    top: "300px",
-                    left: "600px",
-                    transform: "rotate(45deg)",
-                    transformOrigin: "top left",
-                }}
-            />
+                    {/* Line: Root → Right */}
+                    <div
+                        className="absolute bg-blue-300"
+                        style={{
+                            width: "4px",
+                            height: "100px",
+                            top: "300px",
+                            left: "600px",
+                            transform: "rotate(45deg)",
+                            transformOrigin: "top left",
+                            borderRadius: "2px",
+                        }}
+                    />
+                </>
+            )}
+
 
 
             {/* 🔘 Submit Button */}
