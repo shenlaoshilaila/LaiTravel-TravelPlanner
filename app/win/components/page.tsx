@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import Image from "next/image";
 
 export default function ComponentsGamePage() {
@@ -9,6 +9,13 @@ export default function ComponentsGamePage() {
     const [userAnswer, setUserAnswer] = useState("");
     const [message, setMessage] = useState("");
     const [gameStarted, setGameStarted] = useState(false);
+    const [showWrongGif, setShowWrongGif] = useState(false);
+    const [showWinGif, setShowWinGif] = useState(false);
+    const [correctCount, setCorrectCount] = useState(0);
+    const [score, setScore] = useState(0);
+
+    const inputRef = useRef<HTMLInputElement | null>(null);
+    const wrongSoundRef = useRef<HTMLAudioElement | null>(null); // 🎵 sound reference
 
     // 🎮 Start game
     const startGame = () => {
@@ -20,30 +27,65 @@ export default function ComponentsGamePage() {
         generateNewLeft();
         setRightChild(null);
         setMessage("");
+        setCorrectCount(0);
+        setScore(0);
+
+        // Focus input shortly after game starts
+        setTimeout(() => inputRef.current?.focus(), 200);
     };
 
-    // 🍎 Generate random left child
+    // 🍎 Generate random left child (0–5)
     const generateNewLeft = () => {
-        const random = Math.floor(Math.random() * 6); // 0–3
+        if (rootValue === null) return;
+
+        // 🎯 Generate number from 0 to rootValue (inclusive)
+        const random = Math.floor(Math.random() * (rootValue + 1));
+
         setLeftChild(random);
         setRightChild(null);
         setUserAnswer("");
+
+        // Focus the input after new question
+        setTimeout(() => inputRef.current?.focus(), 150);
     };
+
 
     // 🧠 Check answer
     const checkAnswer = () => {
         if (leftChild === null || rootValue === null) return;
         const correct = rootValue - leftChild;
         const guess = Number(userAnswer);
+
         if (guess === correct) {
             setRightChild(guess);
             setMessage("✅ Good job!");
+            setCorrectCount((prev) => prev + 1);
+            setScore((prev) => prev + 10); // 💯 Add 10 points per correct answer
+
+            // 🎉 Show win GIF after 10 correct answers
+            if (correctCount + 1 >= 10) {
+                setShowWinGif(true);
+                setTimeout(() => setShowWinGif(false), 1000);
+                setCorrectCount(0);
+            }
+
+            // Generate new question after delay
             setTimeout(() => {
                 generateNewLeft();
                 setMessage("");
             }, 1200);
         } else {
+            // ❌ Wrong answer
             setMessage("❌ Try again!");
+            setShowWrongGif(true);
+
+            // 🔊 Play sound
+            wrongSoundRef.current?.play().catch(() => {});
+
+            setTimeout(() => setShowWrongGif(false), 1000);
+
+            // Refocus input to try again
+            setTimeout(() => inputRef.current?.focus(), 200);
         }
     };
 
@@ -54,7 +96,15 @@ export default function ComponentsGamePage() {
                 🍎 Components Game
             </h1>
 
-            {/* 🎮 Step 1: Input root number (shown before game starts) */}
+            {/* 🧮 Score Box */}
+            {gameStarted && (
+                <div className="absolute top-[60px] left-[40px] bg-white/20 border border-white/30 rounded-2xl p-4 w-[120px] text-center shadow-lg backdrop-blur-sm">
+                    <p className="text-xl font-semibold text-yellow-300">Score</p>
+                    <p className="text-3xl font-bold text-white mt-1">{score}</p>
+                </div>
+            )}
+
+            {/* 🎮 Step 1: Input root number */}
             {!gameStarted && (
                 <div className="absolute top-[150px] left-1/2 -translate-x-1/2 flex flex-col items-center space-y-4">
                     <label className="text-lg">Enter a number (1–10):</label>
@@ -99,7 +149,7 @@ export default function ComponentsGamePage() {
                                 fill
                                 style={{ objectFit: "contain" }}
                             />
-                            <span className="absolute text-white text-7xl font-bold  top-[180px] left-[190px]">
+                            <span className="absolute text-white text-7xl font-bold top-[180px] left-[190px]">
                                 {leftChild}
                             </span>
                         </div>
@@ -119,19 +169,57 @@ export default function ComponentsGamePage() {
                             </span>
                         ) : (
                             <input
+                                ref={inputRef}
                                 type="number"
                                 value={userAnswer}
                                 onChange={(e) => setUserAnswer(e.target.value)}
-                                className="absolute w-[50px] text-center text-black rounded-md bg-white/90 border border-gray-300"
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                        checkAnswer();
+                                    }
+                                }}
+                                className="absolute w-[60px] text-center text-black rounded-md bg-white/90 border border-gray-300"
                                 style={{
                                     height: "50px",
                                     top: "200px",
                                     right: "210px",
-                                    fontSize: "50px"
+                                    fontSize: "40px",
                                 }}
                             />
                         )}
                     </div>
+
+                    {/* 🌿 Connection Lines */}
+                    {gameStarted && (
+                        <>
+                            {/* Line: Root → Left */}
+                            <div
+                                className="absolute bg-blue-300"
+                                style={{
+                                    width: "4px",
+                                    height: "100px",
+                                    top: "220px",
+                                    left: "600px",
+                                    transform: "rotate(135deg)",
+                                    transformOrigin: "top left",
+                                    borderRadius: "2px",
+                                }}
+                            />
+                            {/* Line: Root → Right */}
+                            <div
+                                className="absolute bg-blue-300"
+                                style={{
+                                    width: "4px",
+                                    height: "100px",
+                                    top: "150px",
+                                    left: "350px",
+                                    transform: "rotate(45deg)",
+                                    transformOrigin: "top left",
+                                    borderRadius: "2px",
+                                }}
+                            />
+                        </>
+                    )}
                 </div>
             )}
 
@@ -148,43 +236,6 @@ export default function ComponentsGamePage() {
                 </p>
             )}
 
-            {/* 🌿 Connection Lines */}
-            {/* Line: Root → Left */}
-            {/* 🌿 Connection Lines — visible only when game starts */}
-            {gameStarted && (
-                <>
-                    {/* Line: Root → Left */}
-                    <div
-                        className="absolute bg-blue-300"
-                        style={{
-                            width: "4px",
-                            height: "100px",
-                            top: "380px",
-                            left: "860px",
-                            transform: "rotate(130deg)",
-                            transformOrigin: "top left",
-                            borderRadius: "2px",
-                        }}
-                    />
-
-                    {/* Line: Root → Right */}
-                    <div
-                        className="absolute bg-blue-300"
-                        style={{
-                            width: "4px",
-                            height: "100px",
-                            top: "300px",
-                            left: "600px",
-                            transform: "rotate(45deg)",
-                            transformOrigin: "top left",
-                            borderRadius: "2px",
-                        }}
-                    />
-                </>
-            )}
-
-
-
             {/* 🔘 Submit Button */}
             {gameStarted && rightChild === null && (
                 <button
@@ -194,6 +245,35 @@ export default function ComponentsGamePage() {
                     Submit
                 </button>
             )}
+
+            {/* ❌ Wrong Answer GIF */}
+            {showWrongGif && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                    <Image
+                        src="/image/keep-trying.gif"
+                        alt="Keep Trying"
+                        width={300}
+                        height={300}
+                        className="rounded-2xl shadow-lg"
+                    />
+                </div>
+            )}
+
+            {/* 🎉 Win GIF */}
+            {showWinGif && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                    <Image
+                        src="/image/congrats.gif"
+                        alt="Congratulations!"
+                        width={400}
+                        height={400}
+                        className="rounded-2xl shadow-lg"
+                    />
+                </div>
+            )}
+
+            {/* 🎵 Wrong answer sound */}
+            <audio ref={wrongSoundRef} src="/music/wrong.wav" preload="auto" />
         </main>
     );
 }
