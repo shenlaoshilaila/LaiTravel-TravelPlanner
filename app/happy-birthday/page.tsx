@@ -35,16 +35,18 @@ export default function GameMenuPage() {
                     </button>
                 </Link>
 
-                {/* Placeholder for future games */}
-                <button
-                    disabled
-                    className="
-                        w-64 py-4 bg-gray-500 text-gray-300 font-bold text-xl rounded-xl
-                        opacity-50 cursor-not-allowed shadow-md
-                    "
-                >
-                    🎲 Coming Soon...
-                </button>
+                {/* Game 2 - Components Game */}
+                <Link href="/win/components">
+                    <button
+                        className="
+                            w-64 py-4 bg-purple-500 hover:bg-purple-600
+                            text-white font-bold text-xl rounded-xl
+                            transition-all duration-300 transform hover:scale-105 shadow-lg
+                        "
+                    >
+                        🧩 Components Game
+                    </button>
+                </Link>
             </div>
 
             {/* Footer */}
