@@ -10,12 +10,15 @@ export default function ComponentsGamePage() {
     const [message, setMessage] = useState("");
     const [gameStarted, setGameStarted] = useState(false);
     const [showWrongGif, setShowWrongGif] = useState(false);
+    const [wrongGifSrc, setWrongGifSrc] = useState("/image/keep-trying.gif");
     const [showWinGif, setShowWinGif] = useState(false);
     const [correctCount, setCorrectCount] = useState(0);
     const [score, setScore] = useState(0);
 
     const inputRef = useRef<HTMLInputElement | null>(null);
     const wrongSoundRef = useRef<HTMLAudioElement | null>(null);
+    const chickenSoundRef = useRef<HTMLAudioElement | null>(null);
+    const winnerSoundRef = useRef<HTMLAudioElement | null>(null); // 🏆 for winner
 
     // 🎮 Start game
     const startGame = () => {
@@ -54,22 +57,49 @@ export default function ComponentsGamePage() {
             setCorrectCount((prev) => prev + 1);
             setScore((prev) => prev + 10);
 
+            // 🏆 If user reaches 10 correct answers
             if (correctCount + 1 >= 10) {
                 setShowWinGif(true);
-                setTimeout(() => setShowWinGif(false), 1000);
-                setCorrectCount(0);
+
+                // 🎵 Play winner sound
+                const winSound = winnerSoundRef.current;
+                if (winSound) {
+                    winSound.currentTime = 0;
+                    winSound.loop = true; // optional: keep looping to fill 5s even if short
+                    winSound.play().catch(() => {});
+                    setTimeout(() => {
+                        winSound.pause();
+                        winSound.loop = false;
+                    }, 3000); // ⏱ stop after 5 seconds
+                }
+
+
+                // 🎉 Show congrats GIF for 5 seconds
+                setTimeout(() => {
+                    setShowWinGif(false);
+                    setCorrectCount(0); // reset count for next round
+                    generateNewLeft();
+                    setMessage("");
+                }, 3000);
+                return;
             }
 
+            // 👏 Continue normal success
             setTimeout(() => {
                 generateNewLeft();
                 setMessage("");
             }, 1200);
         } else {
             setMessage("❌ Try again!");
+
+            // 🎲 Randomly choose between two GIFs
+            const randomIsChicken = Math.random() < 0.5;
+            const chosenGif = randomIsChicken ? "/image/pp.gif" : "/image/keep-trying.gif";
+            setWrongGifSrc(chosenGif);
             setShowWrongGif(true);
 
-            // 🎵 Play wrong sound on loop for 5 seconds
-            const sound = wrongSoundRef.current;
+            // 🎵 Play the matching sound (chicken or wrong)
+            const sound = randomIsChicken ? chickenSoundRef.current : wrongSoundRef.current;
             if (sound) {
                 sound.currentTime = 0;
                 sound.loop = true;
@@ -77,14 +107,14 @@ export default function ComponentsGamePage() {
                 setTimeout(() => {
                     sound.pause();
                     sound.loop = false;
-                }, 5000);
+                }, 3000);
             }
 
-            // 🎬 Show "keep trying" GIF for 5 seconds
-            setTimeout(() => setShowWrongGif(false), 5000);
+            // 🎬 Show random GIF for 3 seconds
+            setTimeout(() => setShowWrongGif(false), 3000);
 
-            // ⌨️ Refocus after 5s
-            setTimeout(() => inputRef.current?.focus(), 5200);
+            // ⌨️ Refocus after 3s
+            setTimeout(() => inputRef.current?.focus(), 3200);
         }
     };
 
@@ -181,12 +211,12 @@ export default function ComponentsGamePage() {
                 </button>
             )}
 
-            {/* ❌ Wrong Answer GIF */}
+            {/* ❌ Wrong Answer GIF (random) */}
             {showWrongGif && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-50 transition-opacity duration-700">
                     <Image
-                        src="/image/keep-trying.gif"
-                        alt="Keep Trying"
+                        src={wrongGifSrc}
+                        alt="Try Again"
                         width={300}
                         height={300}
                         className="rounded-2xl shadow-lg"
@@ -197,13 +227,15 @@ export default function ComponentsGamePage() {
 
             {/* 🎉 Win GIF */}
             {showWinGif && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-50">
                     <Image src="/image/congrats.gif" alt="Congratulations!" width={400} height={400} className="rounded-2xl shadow-lg" />
                 </div>
             )}
 
-            {/* 🎵 Wrong Answer Sound */}
+            {/* 🎵 Sounds */}
             <audio ref={wrongSoundRef} src="/music/wrong.wav" preload="auto" />
+            <audio ref={chickenSoundRef} src="/music/chicken.wav" preload="auto" />
+            <audio ref={winnerSoundRef} src="/music/winer.wav" preload="auto" />
         </main>
     );
 }
