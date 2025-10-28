@@ -112,21 +112,21 @@ export default function ComponentsGamePage() {
             {gameStarted && (
                 <div className="relative mx-auto mt-[25vh] w-full max-w-[800px] aspect-[4/3]">
                     {/* 🌳 Root Apple */}
-                    <div className="absolute left-1/2 top-[0%] -translate-x-1/2 w-[55%] aspect-square flex items-center justify-center">
+                    <div className="absolute left-1/2 top-[0%] -translate-x-1/2 scale-[1.5] sm:scale-[1.3] w-[55%] aspect-square flex items-center justify-center">
                         <Image src="/image/appleroot.png" alt="root apple" fill style={{ objectFit: "contain" }} />
                         <span className="absolute text-white font-bold text-[8vw] sm:text-7xl -translate-y-[30%]">{rootValue}</span>
                     </div>
 
                     {/* 🍏 Left Apple */}
                     {leftChild !== null && (
-                        <div className="absolute left-[5%] top-[35%] w-[55%] aspect-square flex items-center justify-center">
+                        <div className="absolute left-[5%] top-[35%] scale-[1.4] sm:scale-[1.2] w-[55%] aspect-square flex items-center justify-center">
                             <Image src="/image/appleleft.png" alt="left apple" fill style={{ objectFit: "contain" }} />
                             <span className="absolute text-white font-bold text-[7vw] sm:text-6xl -translate-y-[40%] -translate-x-[85%]">{leftChild}</span>
                         </div>
                     )}
 
                     {/* 🍎 Right Apple (answer) */}
-                    <div className="absolute right-[5%] top-[35%] w-[55%] aspect-square flex items-center justify-center">
+                    <div className="absolute right-[5%] top-[35%] scale-[1.4] sm:scale-[1.2] w-[55%] aspect-square flex items-center justify-center">
                         <Image src="/image/appleright.png" alt="right apple" fill style={{ objectFit: "contain" }} />
                         {rightChild !== null ? (
                             <span className="absolute text-white font-bold text-[7vw] sm:text-6xl -translate-y-[40%] -translate-x-[15%]">{rightChild}</span>
@@ -137,7 +137,8 @@ export default function ComponentsGamePage() {
                                 value={userAnswer}
                                 onChange={(e) => setUserAnswer(e.target.value)}
                                 onKeyDown={(e) => e.key === "Enter" && checkAnswer()}
-                                className="absolute w-[18vw] max-w-[40px] h-[10vw] max-h-[100px] text-center text-black rounded-md bg-white/90 border border-gray-300 text-[5vw] sm:text-3xl -translate-y-[35%]"
+                                className="absolute w-[18vw] max-w-[40px] h-[19vw] max-h-[120px] text-center text-black rounded-md bg-white/90 border border-gray-300 text-[5vw] sm:text-3xl -translate-y-[35%]"
+
                                 style={{ height: "auto" }}
                             />
                         )}
