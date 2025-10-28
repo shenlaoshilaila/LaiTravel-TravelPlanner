@@ -67,9 +67,24 @@ export default function ComponentsGamePage() {
         } else {
             setMessage("❌ Try again!");
             setShowWrongGif(true);
-            wrongSoundRef.current?.play().catch(() => {});
-            setTimeout(() => setShowWrongGif(false), 1000);
-            setTimeout(() => inputRef.current?.focus(), 200);
+
+            // 🎵 Play wrong sound on loop for 5 seconds
+            const sound = wrongSoundRef.current;
+            if (sound) {
+                sound.currentTime = 0;
+                sound.loop = true;
+                sound.play().catch(() => {});
+                setTimeout(() => {
+                    sound.pause();
+                    sound.loop = false;
+                }, 5000);
+            }
+
+            // 🎬 Show "keep trying" GIF for 5 seconds
+            setTimeout(() => setShowWrongGif(false), 5000);
+
+            // ⌨️ Refocus after 5s
+            setTimeout(() => inputRef.current?.focus(), 5200);
         }
     };
 
@@ -138,7 +153,6 @@ export default function ComponentsGamePage() {
                                 onChange={(e) => setUserAnswer(e.target.value)}
                                 onKeyDown={(e) => e.key === "Enter" && checkAnswer()}
                                 className="absolute w-[18vw] max-w-[40px] h-[19vw] max-h-[120px] text-center text-black rounded-md bg-white/90 border border-gray-300 text-[5vw] sm:text-3xl -translate-y-[35%]"
-
                                 style={{ height: "auto" }}
                             />
                         )}
@@ -169,8 +183,15 @@ export default function ComponentsGamePage() {
 
             {/* ❌ Wrong Answer GIF */}
             {showWrongGif && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                    <Image src="/image/keep-trying.gif" alt="Keep Trying" width={300} height={300} className="rounded-2xl shadow-lg" />
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-50 transition-opacity duration-700">
+                    <Image
+                        src="/image/keep-trying.gif"
+                        alt="Keep Trying"
+                        width={300}
+                        height={300}
+                        className="rounded-2xl shadow-lg"
+                        priority
+                    />
                 </div>
             )}
 
