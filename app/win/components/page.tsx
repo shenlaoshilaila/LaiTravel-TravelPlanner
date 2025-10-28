@@ -15,7 +15,7 @@ export default function ComponentsGamePage() {
     const [score, setScore] = useState(0);
 
     const inputRef = useRef<HTMLInputElement | null>(null);
-    const wrongSoundRef = useRef<HTMLAudioElement | null>(null); // 🎵 sound reference
+    const wrongSoundRef = useRef<HTMLAudioElement | null>(null);
 
     // 🎮 Start game
     const startGame = () => {
@@ -29,26 +29,18 @@ export default function ComponentsGamePage() {
         setMessage("");
         setCorrectCount(0);
         setScore(0);
-
-        // Focus input shortly after game starts
         setTimeout(() => inputRef.current?.focus(), 200);
     };
 
-    // 🍎 Generate random left child (0–5)
+    // 🍎 Generate random left child
     const generateNewLeft = () => {
         if (rootValue === null) return;
-
-        // 🎯 Generate number from 0 to rootValue (inclusive)
         const random = Math.floor(Math.random() * (rootValue + 1));
-
         setLeftChild(random);
         setRightChild(null);
         setUserAnswer("");
-
-        // Focus the input after new question
         setTimeout(() => inputRef.current?.focus(), 150);
     };
-
 
     // 🧠 Check answer
     const checkAnswer = () => {
@@ -60,176 +52,104 @@ export default function ComponentsGamePage() {
             setRightChild(guess);
             setMessage("✅ Good job!");
             setCorrectCount((prev) => prev + 1);
-            setScore((prev) => prev + 10); // 💯 Add 10 points per correct answer
+            setScore((prev) => prev + 10);
 
-            // 🎉 Show win GIF after 10 correct answers
             if (correctCount + 1 >= 10) {
                 setShowWinGif(true);
                 setTimeout(() => setShowWinGif(false), 1000);
                 setCorrectCount(0);
             }
 
-            // Generate new question after delay
             setTimeout(() => {
                 generateNewLeft();
                 setMessage("");
             }, 1200);
         } else {
-            // ❌ Wrong answer
             setMessage("❌ Try again!");
             setShowWrongGif(true);
-
-            // 🔊 Play sound
             wrongSoundRef.current?.play().catch(() => {});
-
             setTimeout(() => setShowWrongGif(false), 1000);
-
-            // Refocus input to try again
             setTimeout(() => inputRef.current?.focus(), 200);
         }
     };
 
     return (
         <main className="min-h-screen bg-gradient-to-b from-purple-600 to-indigo-700 text-white font-sans relative overflow-hidden">
-            {/* 🎯 Fixed title */}
-            <h1 className="absolute top-[40px] left-1/2 -translate-x-1/2 text-5xl font-extrabold flex items-center gap-2">
+            {/* ✅ Title */}
+            <h1 className="absolute top-[4vw] left-1/2 -translate-x-1/2 text-[6vw] sm:text-5xl font-extrabold flex items-center gap-2">
                 🍎 Components Game
             </h1>
 
-            {/* 🧮 Score Box */}
+            {/* 🧮 Score */}
             {gameStarted && (
-                <div className="absolute top-[60px] left-[40px] bg-white/20 border border-white/30 rounded-2xl p-4 w-[120px] text-center shadow-lg backdrop-blur-sm">
-                    <p className="text-xl font-semibold text-yellow-300">Score</p>
-                    <p className="text-3xl font-bold text-white mt-1">{score}</p>
+                <div className="absolute top-[4vw] left-[5vw] bg-white/20 border border-white/30 rounded-2xl p-3 w-[22vw] max-w-[120px] text-center shadow-lg backdrop-blur-sm">
+                    <p className="text-[4vw] sm:text-xl font-semibold text-yellow-300">Score</p>
+                    <p className="text-[6vw] sm:text-3xl font-bold text-white mt-1">{score}</p>
                 </div>
             )}
 
-            {/* 🎮 Step 1: Input root number */}
+            {/* ✏️ Step 1: Input */}
             {!gameStarted && (
-                <div className="absolute top-[150px] left-1/2 -translate-x-1/2 flex flex-col items-center space-y-4">
-                    <label className="text-lg">Enter a number (1–10):</label>
+                <div className="absolute top-[35vh] left-1/2 -translate-x-1/2 flex flex-col items-center space-y-4 text-center">
+                    <label className="text-lg sm:text-xl">Enter a number (1–10):</label>
                     <input
                         type="number"
                         value={rootValue ?? ""}
                         onChange={(e) => setRootValue(Number(e.target.value))}
-                        className="text-black px-3 py-2 rounded-md text-center w-32"
+                        className="text-black px-3 py-2 rounded-md text-center w-[40vw] max-w-[150px]"
                     />
                     <button
                         onClick={startGame}
-                        className="bg-blue-500 hover:bg-blue-600 px-6 py-3 rounded-xl font-bold"
+                        className="bg-blue-500 hover:bg-blue-600 px-6 py-3 rounded-xl font-bold text-[4vw] sm:text-lg"
                     >
                         Start
                     </button>
-                    {message && <p className="text-red-300">{message}</p>}
+                    {message && <p className="text-red-300 text-sm sm:text-base">{message}</p>}
                 </div>
             )}
 
-            {/* 🎯 Step 2: Game Display */}
+            {/* 🍎 Step 2: Game Display */}
             {gameStarted && (
-                <div className="absolute top-[150px] left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-transparent">
-                    {/* 🍎 Root Apple */}
-                    <div className="absolute left-[200px] top-[-100px] w-[500px] h-[500px] flex items-center justify-center">
-                        <Image
-                            src="/image/appleroot.png"
-                            alt="root apple"
-                            fill
-                            style={{ objectFit: "contain" }}
-                        />
-                        <span className="absolute text-white text-8xl font-bold top-[160px]">
-                            {rootValue}
-                        </span>
+                <div className="relative mx-auto mt-[25vh] w-full max-w-[800px] aspect-[4/3]">
+                    {/* 🌳 Root Apple */}
+                    <div className="absolute left-1/2 top-[5%] -translate-x-1/2 w-[40%] aspect-square flex items-center justify-center">
+                        <Image src="/image/appleroot.png" alt="root apple" fill style={{ objectFit: "contain" }} />
+                        <span className="absolute text-white font-bold text-[8vw] sm:text-7xl">{rootValue}</span>
                     </div>
 
                     {/* 🍏 Left Apple */}
                     {leftChild !== null && (
-                        <div className="absolute left-[60px] top-[80px] w-[500px] h-[500px] flex items-center justify-center">
-                            <Image
-                                src="/image/appleleft.png"
-                                alt="left apple"
-                                fill
-                                style={{ objectFit: "contain" }}
-                            />
-                            <span className="absolute text-white text-7xl font-bold top-[180px] left-[190px]">
-                                {leftChild}
-                            </span>
+                        <div className="absolute left-[5%] top-[45%] w-[35%] aspect-square flex items-center justify-center">
+                            <Image src="/image/appleleft.png" alt="left apple" fill style={{ objectFit: "contain" }} />
+                            <span className="absolute text-white font-bold text-[7vw] sm:text-6xl">{leftChild}</span>
                         </div>
                     )}
 
-                    {/* 🍎 Right Apple (answer area) */}
-                    <div className="absolute left-[350px] top-[70px] w-[500px] h-[500px] flex items-center justify-center">
-                        <Image
-                            src="/image/appleright.png"
-                            alt="right apple"
-                            fill
-                            style={{ objectFit: "contain" }}
-                        />
+                    {/* 🍎 Right Apple (answer) */}
+                    <div className="absolute right-[5%] top-[45%] w-[35%] aspect-square flex items-center justify-center">
+                        <Image src="/image/appleright.png" alt="right apple" fill style={{ objectFit: "contain" }} />
                         {rightChild !== null ? (
-                            <span className="absolute text-white text-7xl font-bold top-[180px] left-[250px]">
-                                {rightChild}
-                            </span>
+                            <span className="absolute text-white font-bold text-[7vw] sm:text-6xl">{rightChild}</span>
                         ) : (
                             <input
                                 ref={inputRef}
                                 type="number"
                                 value={userAnswer}
                                 onChange={(e) => setUserAnswer(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                        checkAnswer();
-                                    }
-                                }}
-                                className="absolute w-[60px] text-center text-black rounded-md bg-white/90 border border-gray-300"
-                                style={{
-                                    height: "50px",
-                                    top: "200px",
-                                    right: "210px",
-                                    fontSize: "40px",
-                                }}
+                                onKeyDown={(e) => e.key === "Enter" && checkAnswer()}
+                                className="absolute w-[18vw] max-w-[80px] text-center text-black rounded-md bg-white/90 border border-gray-300 text-[5vw] sm:text-3xl"
+                                style={{ height: "auto" }}
                             />
                         )}
                     </div>
-
-                    {/* 🌿 Connection Lines */}
-                    {gameStarted && (
-                        <>
-                            {/* Line: Root → Left */}
-                            <div
-                                className="absolute bg-blue-300"
-                                style={{
-                                    width: "4px",
-                                    height: "100px",
-                                    top: "220px",
-                                    left: "600px",
-                                    transform: "rotate(135deg)",
-                                    transformOrigin: "top left",
-                                    borderRadius: "2px",
-                                }}
-                            />
-                            {/* Line: Root → Right */}
-                            <div
-                                className="absolute bg-blue-300"
-                                style={{
-                                    width: "4px",
-                                    height: "100px",
-                                    top: "150px",
-                                    left: "350px",
-                                    transform: "rotate(45deg)",
-                                    transformOrigin: "top left",
-                                    borderRadius: "2px",
-                                }}
-                            />
-                        </>
-                    )}
                 </div>
             )}
 
-            {/* 🧠 Feedback Message */}
-            {message && (
+            {/* 💬 Message */}
+            {message && gameStarted && (
                 <p
-                    className={`absolute bottom-[100px] left-1/2 -translate-x-1/2 text-xl font-semibold ${
-                        message.includes("Good")
-                            ? "text-green-300"
-                            : "text-red-300"
+                    className={`absolute bottom-[20vh] left-1/2 -translate-x-1/2 text-[5vw] sm:text-xl font-semibold ${
+                        message.includes("Good") ? "text-green-300" : "text-red-300"
                     }`}
                 >
                     {message}
@@ -240,7 +160,7 @@ export default function ComponentsGamePage() {
             {gameStarted && rightChild === null && (
                 <button
                     onClick={checkAnswer}
-                    className="absolute bottom-[150px] left-1/2 -translate-x-[20%] bg-pink-500 hover:bg-pink-600 px-6 py-3 rounded-xl font-bold transition-all duration-300 transform hover:scale-105"
+                    className="absolute bottom-[10vh] left-1/2 -translate-x-1/2 bg-pink-500 hover:bg-pink-600 px-6 py-3 rounded-xl font-bold text-[4vw] sm:text-lg"
                 >
                     Submit
                 </button>
@@ -249,30 +169,18 @@ export default function ComponentsGamePage() {
             {/* ❌ Wrong Answer GIF */}
             {showWrongGif && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                    <Image
-                        src="/image/keep-trying.gif"
-                        alt="Keep Trying"
-                        width={300}
-                        height={300}
-                        className="rounded-2xl shadow-lg"
-                    />
+                    <Image src="/image/keep-trying.gif" alt="Keep Trying" width={300} height={300} className="rounded-2xl shadow-lg" />
                 </div>
             )}
 
             {/* 🎉 Win GIF */}
             {showWinGif && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-                    <Image
-                        src="/image/congrats.gif"
-                        alt="Congratulations!"
-                        width={400}
-                        height={400}
-                        className="rounded-2xl shadow-lg"
-                    />
+                    <Image src="/image/congrats.gif" alt="Congratulations!" width={400} height={400} className="rounded-2xl shadow-lg" />
                 </div>
             )}
 
-            {/* 🎵 Wrong answer sound */}
+            {/* 🎵 Wrong Answer Sound */}
             <audio ref={wrongSoundRef} src="/music/wrong.wav" preload="auto" />
         </main>
     );
