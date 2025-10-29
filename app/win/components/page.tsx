@@ -180,10 +180,11 @@ export default function ComponentsGamePage() {
 
                     {/* 🍎 Right Apple with keypad that shows when tapped */}
                     <div
-                        className="absolute right-[-40%] top-[35%] scale-[1.4] sm:scale-[1.2] w-[55%] aspect-square flex flex-col items-center justify-center relative"
+                        className="absolute right-[0vw] top-[20vh] scale-[1.5] sm:scale-[1.1] w-[60vw] sm:w-[55%] aspect-square flex flex-col items-center justify-center"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <Image src="/image/appleright.png" alt="right apple" fill style={{ objectFit: "contain" }} />
+
+                    <Image src="/image/appleright.png" alt="right apple" fill style={{ objectFit: "contain" }} />
 
                         {rightChild !== null ? (
                             <span className="absolute text-white font-bold text-[7vw] sm:text-6xl -translate-y-[40%] -translate-x-[15%]">
