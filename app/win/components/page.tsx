@@ -16,15 +16,27 @@ export default function ComponentsGamePage() {
     const [score, setScore] = useState(0);
     const [showKeypad, setShowKeypad] = useState(false);
 
+    const keypadRef = useRef<HTMLDivElement | null>(null);
     const wrongSoundRef = useRef<HTMLAudioElement | null>(null);
     const chickenSoundRef = useRef<HTMLAudioElement | null>(null);
     const winnerSoundRef = useRef<HTMLAudioElement | null>(null);
 
     // ✅ Hide keypad when clicking outside
     useEffect(() => {
-        const handleClickOutside = () => setShowKeypad(false);
-        window.addEventListener("click", handleClickOutside);
-        return () => window.removeEventListener("click", handleClickOutside);
+        function handleClickOutside(event: MouseEvent) {
+            if (
+                keypadRef.current &&
+                !keypadRef.current.contains(event.target as Node)
+            ) {
+                setShowKeypad(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        document.addEventListener("touchstart", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+            document.removeEventListener("touchstart", handleClickOutside);
+        };
     }, []);
 
     // 🎮 Start game
@@ -108,18 +120,13 @@ export default function ComponentsGamePage() {
                 }, 3000);
             }
 
-            setTimeout(() => setShowWrongGif(false), 3000);
+            // 🎬 Show wrong GIF for 3 seconds
+            setTimeout(() => {
+                setShowWrongGif(false);
+                setUserAnswer(""); // 🧹 clear input automatically after feedback
+            }, 3000);
         }
-    };
 
-    // 🔢 Handle custom keypad
-    const handleNumberClick = (num: number) => {
-        if (userAnswer.length >= 2) return; // limit 2 digits
-        setUserAnswer((prev) => prev + num.toString());
-    };
-
-    const handleClear = () => {
-        setUserAnswer("");
     };
 
     return (
@@ -178,126 +185,73 @@ export default function ComponentsGamePage() {
                         </div>
                     )}
 
-                    {/* 🍎 Right Apple with keypad that shows when tapped */}
+                    {/* 🍎 Right Apple */}
                     <div
                         className="absolute right-[0vw] top-[20vh] scale-[1.5] sm:scale-[1.1] w-[60vw] sm:w-[55%] aspect-square flex flex-col items-center justify-center"
-                        onClick={(e) => e.stopPropagation()}
                     >
-
-                    <Image src="/image/appleright.png" alt="right apple" fill style={{ objectFit: "contain" }} />
-
+                        <Image src="/image/appleright.png" alt="right apple" fill style={{ objectFit: "contain" }} />
                         {rightChild !== null ? (
                             <span className="absolute text-white font-bold text-[7vw] sm:text-6xl -translate-y-[40%] -translate-x-[15%]">
                                 {rightChild}
                             </span>
                         ) : (
                             <div className="absolute flex flex-col items-center -translate-y-[35%]">
-                                {/* ✅ Tap box */}
+                                {/* Tap box */}
                                 <div
-                                    onClick={() => setShowKeypad(true)}
-                                    className="w-[18vw] max-w-[40px] h-[19vw] max-h-[120px] flex items-center justify-center text-black rounded-md bg-white/90 border border-gray-300 text-[5vw] sm:text-3xl cursor-pointer"
+                                    onClick={() => setShowKeypad((prev) => !prev)}
+                                    className="w-[18vw] max-w-[40px] h-[19vw] max-h-[120px] flex items-center justify-center text-black rounded-md bg-white/90 border border-gray-300 text-[5vw] sm:text-3xl cursor-pointer select-none"
                                 >
                                     {userAnswer || "?"}
                                 </div>
 
-                                {/* ✅ Show keypad only when clicked */}
+                                {/* ✅ Keypad */}
                                 {showKeypad && (
                                     <div
-                                        className="fixed bottom-[5vh] left-1/2 -translate-x-1/2 z-50 animate-fadeIn w-[85vw] max-w-[300px]"
-                                        onClick={(e) => e.stopPropagation()}
+                                        ref={keypadRef}
+                                        className="fixed bottom-[5vh] left-1/2 -translate-x-1/2 z-50 animate-fadeIn w-[85vw] max-w-[320px]"
                                     >
                                         <div className="grid grid-cols-3 gap-3 bg-white/20 p-5 rounded-3xl backdrop-blur-md shadow-2xl border border-white/30">
-                                            {/* 1–9 */}
-                                            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
-                                                <button
-                                                    key={num}
-                                                    onClick={() => setUserAnswer((prev) => (prev + num).slice(0, 2))}
-                                                    className="bg-pink-400 hover:bg-pink-500 active:scale-95 transition-transform w-full h-[18vw] sm:h-16 rounded-xl text-white text-[7vw] sm:text-2xl font-bold shadow-md"
-                                                >
+                                            {[1,2,3,4,5,6,7,8,9].map((num)=>(
+                                                <button key={num} onClick={()=>setUserAnswer((p)=>(p+num).slice(0,2))}
+                                                        className="bg-pink-400 hover:bg-pink-500 active:scale-95 transition-transform w-full h-[18vw] sm:h-16 rounded-xl text-white text-[7vw] sm:text-2xl font-bold shadow-md">
                                                     {num}
                                                 </button>
                                             ))}
-
-                                            {/* ✅ Submit (bottom-left) */}
-                                            <button
-                                                onClick={checkAnswer}
-                                                className="bg-green-500 hover:bg-green-600 active:scale-95 transition-transform w-full h-[18vw] sm:h-16 rounded-xl text-white text-[6vw] sm:text-xl font-bold flex items-center justify-center shadow-md"
-                                            >
+                                            {/* Submit */}
+                                            <button onClick={checkAnswer}
+                                                    className="bg-green-500 hover:bg-green-600 active:scale-95 transition-transform w-full h-[18vw] sm:h-16 rounded-xl text-white text-[6vw] sm:text-xl font-bold shadow-md">
                                                 ✔
                                             </button>
-
-                                            {/* 0 in the middle bottom */}
-                                            <button
-                                                onClick={() => setUserAnswer((prev) => (prev + '0').slice(0, 2))}
-                                                className="bg-pink-400 hover:bg-pink-500 active:scale-95 transition-transform w-full h-[18vw] sm:h-16 rounded-xl text-white text-[7vw] sm:text-2xl font-bold shadow-md"
-                                            >
+                                            {/* 0 */}
+                                            <button onClick={()=>setUserAnswer((p)=>(p+'0').slice(0,2))}
+                                                    className="bg-pink-400 hover:bg-pink-500 active:scale-95 transition-transform w-full h-[18vw] sm:h-16 rounded-xl text-white text-[7vw] sm:text-2xl font-bold shadow-md">
                                                 0
                                             </button>
-
-                                            {/* Delete key on right */}
-                                            <button
-                                                onClick={() => setUserAnswer((prev) => prev.slice(0, -1))}
-                                                className="bg-gray-600 hover:bg-gray-700 active:scale-95 transition-transform w-full h-[18vw] sm:h-16 rounded-xl text-white text-[6vw] sm:text-xl font-bold flex items-center justify-center shadow-md"
-                                            >
+                                            {/* Delete */}
+                                            <button onClick={()=>setUserAnswer((p)=>p.slice(0,-1))}
+                                                    className="bg-gray-600 hover:bg-gray-700 active:scale-95 transition-transform w-full h-[18vw] sm:h-16 rounded-xl text-white text-[6vw] sm:text-xl font-bold shadow-md">
                                                 ⌫
                                             </button>
                                         </div>
                                     </div>
                                 )}
-
-
-
                             </div>
                         )}
                     </div>
                 </div>
             )}
 
-            {/* 💬 Message */}
-            {message && gameStarted && (
-                <p
-                    className={`absolute bottom-[20vh] left-1/2 -translate-x-1/2 text-[5vw] sm:text-xl font-semibold ${
-                        message.includes("Good") ? "text-green-300" : "text-red-300"
-                    }`}
-                >
-                    {message}
-                </p>
-            )}
-
-            {/* 🔘 Submit Button */}
-            {gameStarted && rightChild === null && (
-                <button
-                    onClick={checkAnswer}
-                    className="absolute bottom-[10vh] left-1/2 -translate-x-1/2 bg-pink-500 hover:bg-pink-600 px-6 py-3 rounded-xl font-bold text-[4vw] sm:text-lg"
-                >
-                    Submit
-                </button>
-            )}
-
-            {/* ❌ Wrong Answer GIF */}
+            {/* ❌ Wrong GIF */}
             {showWrongGif && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-50 transition-opacity duration-700">
-                    <Image
-                        src={wrongGifSrc}
-                        alt="Try Again"
-                        width={300}
-                        height={300}
-                        className="rounded-2xl shadow-lg"
-                        priority
-                    />
+                    <Image src={wrongGifSrc} alt="Try Again" width={300} height={300} className="rounded-2xl shadow-lg" priority />
                 </div>
             )}
 
             {/* 🎉 Win GIF */}
             {showWinGif && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-50">
-                    <Image
-                        src="/image/congrats.gif"
-                        alt="Congratulations!"
-                        width={400}
-                        height={400}
-                        className="rounded-2xl shadow-lg"
-                    />
+                    <Image src="/image/congrats.gif" alt="Congratulations!" width={400} height={400} className="rounded-2xl shadow-lg" />
                 </div>
             )}
 
