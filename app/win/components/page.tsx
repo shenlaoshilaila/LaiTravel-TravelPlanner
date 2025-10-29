@@ -16,27 +16,15 @@ export default function ComponentsGamePage() {
     const [score, setScore] = useState(0);
     const [showKeypad, setShowKeypad] = useState(false);
 
-    const keypadRef = useRef<HTMLDivElement | null>(null);
     const wrongSoundRef = useRef<HTMLAudioElement | null>(null);
     const chickenSoundRef = useRef<HTMLAudioElement | null>(null);
     const winnerSoundRef = useRef<HTMLAudioElement | null>(null);
 
     // ✅ Hide keypad when clicking outside
     useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            if (
-                keypadRef.current &&
-                !keypadRef.current.contains(event.target as Node)
-            ) {
-                setShowKeypad(false);
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside);
-        document.addEventListener("touchstart", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-            document.removeEventListener("touchstart", handleClickOutside);
-        };
+        const handleClickOutside = () => setShowKeypad(false);
+        window.addEventListener("click", handleClickOutside);
+        return () => window.removeEventListener("click", handleClickOutside);
     }, []);
 
     // 🎮 Start game
@@ -83,13 +71,13 @@ export default function ComponentsGamePage() {
                     winSound.currentTime = 0;
                     winSound.loop = true;
                     winSound.play().catch(() => {});
-                    setTimeout(() => {
+                    window.setTimeout(() => {
                         winSound.pause();
                         winSound.loop = false;
                     }, 3000);
                 }
 
-                setTimeout(() => {
+                window.setTimeout(() => {
                     setShowWinGif(false);
                     setCorrectCount(0);
                     generateNewLeft();
@@ -98,7 +86,7 @@ export default function ComponentsGamePage() {
                 return;
             }
 
-            setTimeout(() => {
+            window.setTimeout(() => {
                 generateNewLeft();
                 setMessage("");
             }, 1200);
@@ -114,20 +102,27 @@ export default function ComponentsGamePage() {
                 sound.currentTime = 0;
                 sound.loop = true;
                 sound.play().catch(() => {});
-                setTimeout(() => {
+                window.setTimeout(() => {
                     sound.pause();
                     sound.loop = false;
                 }, 3000);
             }
 
-            // 🎬 Show wrong GIF for 3 seconds
-            setTimeout(() => {
+            // 🎬 Show wrong GIF for 3 seconds, then clear input
+            window.setTimeout(() => {
                 setShowWrongGif(false);
-                setUserAnswer(""); // 🧹 clear input automatically after feedback
+                setUserAnswer(""); // 🧹 Auto clear input after wrong answer
             }, 3000);
         }
-
     };
+
+    // 🔢 Handle keypad
+    const handleNumberClick = (num: number) => {
+        if (userAnswer.length >= 2) return;
+        setUserAnswer((prev) => prev + num.toString());
+    };
+
+    const handleClear = () => setUserAnswer("");
 
     return (
         <main className="min-h-screen bg-gradient-to-b from-purple-600 to-indigo-700 text-white font-sans relative overflow-hidden">
@@ -164,10 +159,10 @@ export default function ComponentsGamePage() {
                 </div>
             )}
 
-            {/* 🍎 Step 2: Game Display */}
+            {/* 🍎 Game Display */}
             {gameStarted && (
                 <div className="relative mx-auto mt-[25vh] w-full max-w-[800px] aspect-[4/3]">
-                    {/* 🌳 Root Apple */}
+                    {/* Root Apple */}
                     <div className="absolute left-1/2 top-[0%] -translate-x-1/2 scale-[1.5] sm:scale-[1.3] w-[55%] aspect-square flex items-center justify-center">
                         <Image src="/image/appleroot.png" alt="root apple" fill style={{ objectFit: "contain" }} />
                         <span className="absolute text-white font-bold text-[8vw] sm:text-7xl -translate-y-[30%]">
@@ -175,7 +170,7 @@ export default function ComponentsGamePage() {
                         </span>
                     </div>
 
-                    {/* 🍏 Left Apple */}
+                    {/* Left Apple */}
                     {leftChild !== null && (
                         <div className="absolute left-[5%] top-[35%] scale-[1.4] sm:scale-[1.2] w-[55%] aspect-square flex items-center justify-center">
                             <Image src="/image/appleleft.png" alt="left apple" fill style={{ objectFit: "contain" }} />
@@ -185,11 +180,13 @@ export default function ComponentsGamePage() {
                         </div>
                     )}
 
-                    {/* 🍎 Right Apple */}
+                    {/* Right Apple with keypad */}
                     <div
                         className="absolute right-[0vw] top-[20vh] scale-[1.5] sm:scale-[1.1] w-[60vw] sm:w-[55%] aspect-square flex flex-col items-center justify-center"
+                        onClick={(e) => e.stopPropagation()}
                     >
                         <Image src="/image/appleright.png" alt="right apple" fill style={{ objectFit: "contain" }} />
+
                         {rightChild !== null ? (
                             <span className="absolute text-white font-bold text-[7vw] sm:text-6xl -translate-y-[40%] -translate-x-[15%]">
                                 {rightChild}
@@ -204,32 +201,38 @@ export default function ComponentsGamePage() {
                                     {userAnswer || "?"}
                                 </div>
 
-                                {/* ✅ Keypad */}
+                                {/* Keypad */}
                                 {showKeypad && (
                                     <div
-                                        ref={keypadRef}
-                                        className="fixed bottom-[5vh] left-1/2 -translate-x-1/2 z-50 animate-fadeIn w-[85vw] max-w-[320px]"
+                                        className="fixed bottom-[5vh] left-1/2 -translate-x-1/2 z-50 w-[85vw] max-w-[300px]"
+                                        onClick={(e) => e.stopPropagation()}
                                     >
-                                        <div className="grid grid-cols-3 gap-3 bg-white/20 p-5 rounded-3xl backdrop-blur-md shadow-2xl border border-white/30">
+                                        <div className="grid grid-cols-3 gap-3 bg-white/20 p-5 rounded-3xl backdrop-blur-md shadow-2xl border border-white/30 relative">
                                             {[1,2,3,4,5,6,7,8,9].map((num)=>(
-                                                <button key={num} onClick={()=>setUserAnswer((p)=>(p+num).slice(0,2))}
-                                                        className="bg-pink-400 hover:bg-pink-500 active:scale-95 transition-transform w-full h-[18vw] sm:h-16 rounded-xl text-white text-[7vw] sm:text-2xl font-bold shadow-md">
+                                                <button
+                                                    key={num}
+                                                    onClick={() => handleNumberClick(num)}
+                                                    className="bg-pink-400 hover:bg-pink-500 active:scale-95 transition-transform w-full h-[18vw] sm:h-16 rounded-xl text-white text-[7vw] sm:text-2xl font-bold shadow-md"
+                                                >
                                                     {num}
                                                 </button>
                                             ))}
-                                            {/* Submit */}
-                                            <button onClick={checkAnswer}
-                                                    className="bg-green-500 hover:bg-green-600 active:scale-95 transition-transform w-full h-[18vw] sm:h-16 rounded-xl text-white text-[6vw] sm:text-xl font-bold shadow-md">
+                                            <button
+                                                onClick={checkAnswer}
+                                                className="bg-green-500 hover:bg-green-600 w-full h-[18vw] sm:h-16 rounded-xl text-white text-[6vw] sm:text-xl font-bold shadow-md"
+                                            >
                                                 ✔
                                             </button>
-                                            {/* 0 */}
-                                            <button onClick={()=>setUserAnswer((p)=>(p+'0').slice(0,2))}
-                                                    className="bg-pink-400 hover:bg-pink-500 active:scale-95 transition-transform w-full h-[18vw] sm:h-16 rounded-xl text-white text-[7vw] sm:text-2xl font-bold shadow-md">
+                                            <button
+                                                onClick={() => handleNumberClick(0)}
+                                                className="bg-pink-400 hover:bg-pink-500 w-full h-[18vw] sm:h-16 rounded-xl text-white text-[7vw] sm:text-2xl font-bold shadow-md"
+                                            >
                                                 0
                                             </button>
-                                            {/* Delete */}
-                                            <button onClick={()=>setUserAnswer((p)=>p.slice(0,-1))}
-                                                    className="bg-gray-600 hover:bg-gray-700 active:scale-95 transition-transform w-full h-[18vw] sm:h-16 rounded-xl text-white text-[6vw] sm:text-xl font-bold shadow-md">
+                                            <button
+                                                onClick={handleClear}
+                                                className="bg-gray-600 hover:bg-gray-700 w-full h-[18vw] sm:h-16 rounded-xl text-white text-[6vw] sm:text-xl font-bold shadow-md"
+                                            >
                                                 ⌫
                                             </button>
                                         </div>
@@ -241,21 +244,34 @@ export default function ComponentsGamePage() {
                 </div>
             )}
 
-            {/* ❌ Wrong GIF */}
+            {/* Wrong GIF */}
             {showWrongGif && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-50 transition-opacity duration-700">
-                    <Image src={wrongGifSrc} alt="Try Again" width={300} height={300} className="rounded-2xl shadow-lg" priority />
+                    <Image
+                        src={wrongGifSrc}
+                        alt="Try Again"
+                        width={300}
+                        height={300}
+                        className="rounded-2xl shadow-lg"
+                        priority
+                    />
                 </div>
             )}
 
-            {/* 🎉 Win GIF */}
+            {/* Win GIF */}
             {showWinGif && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-50">
-                    <Image src="/image/congrats.gif" alt="Congratulations!" width={400} height={400} className="rounded-2xl shadow-lg" />
+                    <Image
+                        src="/image/congrats.gif"
+                        alt="Congratulations!"
+                        width={400}
+                        height={400}
+                        className="rounded-2xl shadow-lg"
+                    />
                 </div>
             )}
 
-            {/* 🎵 Sounds */}
+            {/* Sounds */}
             <audio ref={wrongSoundRef} src="/music/wrong.wav" preload="auto" />
             <audio ref={chickenSoundRef} src="/music/chicken.wav" preload="auto" />
             <audio ref={winnerSoundRef} src="/music/winer.wav" preload="auto" />
