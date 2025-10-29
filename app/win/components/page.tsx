@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 
 export default function ComponentsGamePage() {
@@ -14,11 +14,18 @@ export default function ComponentsGamePage() {
     const [showWinGif, setShowWinGif] = useState(false);
     const [correctCount, setCorrectCount] = useState(0);
     const [score, setScore] = useState(0);
+    const [showKeypad, setShowKeypad] = useState(false);
 
-    const inputRef = useRef<HTMLInputElement | null>(null);
     const wrongSoundRef = useRef<HTMLAudioElement | null>(null);
     const chickenSoundRef = useRef<HTMLAudioElement | null>(null);
-    const winnerSoundRef = useRef<HTMLAudioElement | null>(null); // 🏆 for winner
+    const winnerSoundRef = useRef<HTMLAudioElement | null>(null);
+
+    // ✅ Hide keypad when clicking outside
+    useEffect(() => {
+        const handleClickOutside = () => setShowKeypad(false);
+        window.addEventListener("click", handleClickOutside);
+        return () => window.removeEventListener("click", handleClickOutside);
+    }, []);
 
     // 🎮 Start game
     const startGame = () => {
@@ -32,7 +39,6 @@ export default function ComponentsGamePage() {
         setMessage("");
         setCorrectCount(0);
         setScore(0);
-        setTimeout(() => inputRef.current?.focus(), 200);
     };
 
     // 🍎 Generate random left child
@@ -42,7 +48,6 @@ export default function ComponentsGamePage() {
         setLeftChild(random);
         setRightChild(null);
         setUserAnswer("");
-        setTimeout(() => inputRef.current?.focus(), 150);
     };
 
     // 🧠 Check answer
@@ -50,6 +55,7 @@ export default function ComponentsGamePage() {
         if (leftChild === null || rootValue === null) return;
         const correct = rootValue - leftChild;
         const guess = Number(userAnswer);
+        setShowKeypad(false);
 
         if (guess === correct) {
             setRightChild(guess);
@@ -57,48 +63,40 @@ export default function ComponentsGamePage() {
             setCorrectCount((prev) => prev + 1);
             setScore((prev) => prev + 10);
 
-            // 🏆 If user reaches 10 correct answers
+            // 🏆 Win condition
             if (correctCount + 1 >= 10) {
                 setShowWinGif(true);
-
-                // 🎵 Play winner sound
                 const winSound = winnerSoundRef.current;
                 if (winSound) {
                     winSound.currentTime = 0;
-                    winSound.loop = true; // optional: keep looping to fill 5s even if short
+                    winSound.loop = true;
                     winSound.play().catch(() => {});
                     setTimeout(() => {
                         winSound.pause();
                         winSound.loop = false;
-                    }, 3000); // ⏱ stop after 5 seconds
+                    }, 3000);
                 }
 
-
-                // 🎉 Show congrats GIF for 5 seconds
                 setTimeout(() => {
                     setShowWinGif(false);
-                    setCorrectCount(0); // reset count for next round
+                    setCorrectCount(0);
                     generateNewLeft();
                     setMessage("");
                 }, 3000);
                 return;
             }
 
-            // 👏 Continue normal success
             setTimeout(() => {
                 generateNewLeft();
                 setMessage("");
             }, 1200);
         } else {
             setMessage("❌ Try again!");
-
-            // 🎲 Randomly choose between two GIFs
             const randomIsChicken = Math.random() < 0.5;
             const chosenGif = randomIsChicken ? "/image/pp.gif" : "/image/keep-trying.gif";
             setWrongGifSrc(chosenGif);
             setShowWrongGif(true);
 
-            // 🎵 Play the matching sound (chicken or wrong)
             const sound = randomIsChicken ? chickenSoundRef.current : wrongSoundRef.current;
             if (sound) {
                 sound.currentTime = 0;
@@ -110,12 +108,18 @@ export default function ComponentsGamePage() {
                 }, 3000);
             }
 
-            // 🎬 Show random GIF for 3 seconds
             setTimeout(() => setShowWrongGif(false), 3000);
-
-            // ⌨️ Refocus after 3s
-            setTimeout(() => inputRef.current?.focus(), 3200);
         }
+    };
+
+    // 🔢 Handle custom keypad
+    const handleNumberClick = (num: number) => {
+        if (userAnswer.length >= 2) return; // limit 2 digits
+        setUserAnswer((prev) => prev + num.toString());
+    };
+
+    const handleClear = () => {
+        setUserAnswer("");
     };
 
     return (
@@ -159,32 +163,90 @@ export default function ComponentsGamePage() {
                     {/* 🌳 Root Apple */}
                     <div className="absolute left-1/2 top-[0%] -translate-x-1/2 scale-[1.5] sm:scale-[1.3] w-[55%] aspect-square flex items-center justify-center">
                         <Image src="/image/appleroot.png" alt="root apple" fill style={{ objectFit: "contain" }} />
-                        <span className="absolute text-white font-bold text-[8vw] sm:text-7xl -translate-y-[30%]">{rootValue}</span>
+                        <span className="absolute text-white font-bold text-[8vw] sm:text-7xl -translate-y-[30%]">
+                            {rootValue}
+                        </span>
                     </div>
 
                     {/* 🍏 Left Apple */}
                     {leftChild !== null && (
                         <div className="absolute left-[5%] top-[35%] scale-[1.4] sm:scale-[1.2] w-[55%] aspect-square flex items-center justify-center">
                             <Image src="/image/appleleft.png" alt="left apple" fill style={{ objectFit: "contain" }} />
-                            <span className="absolute text-white font-bold text-[7vw] sm:text-6xl -translate-y-[40%] -translate-x-[85%]">{leftChild}</span>
+                            <span className="absolute text-white font-bold text-[7vw] sm:text-6xl -translate-y-[40%] -translate-x-[85%]">
+                                {leftChild}
+                            </span>
                         </div>
                     )}
 
-                    {/* 🍎 Right Apple (answer) */}
-                    <div className="absolute right-[5%] top-[35%] scale-[1.4] sm:scale-[1.2] w-[55%] aspect-square flex items-center justify-center">
+                    {/* 🍎 Right Apple with keypad that shows when tapped */}
+                    <div
+                        className="absolute right-[-40%] top-[35%] scale-[1.4] sm:scale-[1.2] w-[55%] aspect-square flex flex-col items-center justify-center relative"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <Image src="/image/appleright.png" alt="right apple" fill style={{ objectFit: "contain" }} />
+
                         {rightChild !== null ? (
-                            <span className="absolute text-white font-bold text-[7vw] sm:text-6xl -translate-y-[40%] -translate-x-[15%]">{rightChild}</span>
+                            <span className="absolute text-white font-bold text-[7vw] sm:text-6xl -translate-y-[40%] -translate-x-[15%]">
+                                {rightChild}
+                            </span>
                         ) : (
-                            <input
-                                ref={inputRef}
-                                type="number"
-                                value={userAnswer}
-                                onChange={(e) => setUserAnswer(e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && checkAnswer()}
-                                className="absolute w-[18vw] max-w-[40px] h-[19vw] max-h-[120px] text-center text-black rounded-md bg-white/90 border border-gray-300 text-[5vw] sm:text-3xl -translate-y-[35%]"
-                                style={{ height: "auto" }}
-                            />
+                            <div className="absolute flex flex-col items-center -translate-y-[35%]">
+                                {/* ✅ Tap box */}
+                                <div
+                                    onClick={() => setShowKeypad(true)}
+                                    className="w-[18vw] max-w-[40px] h-[19vw] max-h-[120px] flex items-center justify-center text-black rounded-md bg-white/90 border border-gray-300 text-[5vw] sm:text-3xl cursor-pointer"
+                                >
+                                    {userAnswer || "?"}
+                                </div>
+
+                                {/* ✅ Show keypad only when clicked */}
+                                {showKeypad && (
+                                    <div
+                                        className="fixed bottom-[5vh] left-1/2 -translate-x-1/2 z-50 animate-fadeIn w-[85vw] max-w-[300px]"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        <div className="grid grid-cols-3 gap-3 bg-white/20 p-5 rounded-3xl backdrop-blur-md shadow-2xl border border-white/30">
+                                            {/* 1–9 */}
+                                            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
+                                                <button
+                                                    key={num}
+                                                    onClick={() => setUserAnswer((prev) => (prev + num).slice(0, 2))}
+                                                    className="bg-pink-400 hover:bg-pink-500 active:scale-95 transition-transform w-full h-[18vw] sm:h-16 rounded-xl text-white text-[7vw] sm:text-2xl font-bold shadow-md"
+                                                >
+                                                    {num}
+                                                </button>
+                                            ))}
+
+                                            {/* ✅ Submit (bottom-left) */}
+                                            <button
+                                                onClick={checkAnswer}
+                                                className="bg-green-500 hover:bg-green-600 active:scale-95 transition-transform w-full h-[18vw] sm:h-16 rounded-xl text-white text-[6vw] sm:text-xl font-bold flex items-center justify-center shadow-md"
+                                            >
+                                                ✔
+                                            </button>
+
+                                            {/* 0 in the middle bottom */}
+                                            <button
+                                                onClick={() => setUserAnswer((prev) => (prev + '0').slice(0, 2))}
+                                                className="bg-pink-400 hover:bg-pink-500 active:scale-95 transition-transform w-full h-[18vw] sm:h-16 rounded-xl text-white text-[7vw] sm:text-2xl font-bold shadow-md"
+                                            >
+                                                0
+                                            </button>
+
+                                            {/* Delete key on right */}
+                                            <button
+                                                onClick={() => setUserAnswer((prev) => prev.slice(0, -1))}
+                                                className="bg-gray-600 hover:bg-gray-700 active:scale-95 transition-transform w-full h-[18vw] sm:h-16 rounded-xl text-white text-[6vw] sm:text-xl font-bold flex items-center justify-center shadow-md"
+                                            >
+                                                ⌫
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+
+
+                            </div>
                         )}
                     </div>
                 </div>
@@ -211,7 +273,7 @@ export default function ComponentsGamePage() {
                 </button>
             )}
 
-            {/* ❌ Wrong Answer GIF (random) */}
+            {/* ❌ Wrong Answer GIF */}
             {showWrongGif && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-50 transition-opacity duration-700">
                     <Image
@@ -228,7 +290,13 @@ export default function ComponentsGamePage() {
             {/* 🎉 Win GIF */}
             {showWinGif && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-50">
-                    <Image src="/image/congrats.gif" alt="Congratulations!" width={400} height={400} className="rounded-2xl shadow-lg" />
+                    <Image
+                        src="/image/congrats.gif"
+                        alt="Congratulations!"
+                        width={400}
+                        height={400}
+                        className="rounded-2xl shadow-lg"
+                    />
                 </div>
             )}
 
