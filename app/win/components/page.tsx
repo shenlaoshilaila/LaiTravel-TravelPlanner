@@ -186,7 +186,8 @@ export default function ComponentsGamePage() {
 
                     {/* Right Apple */}
                     <div
-                        className="absolute right-[0vw] top-[20vh] scale-[1.5] sm:scale-[1.1] w-[60vw] sm:w-[55%] aspect-square flex flex-col items-center justify-center"
+                        className="absolute right-[5%] top-[35%] w-[55%] sm:w-[50%] aspect-square flex flex-col items-center justify-center scale-[1.3] sm:scale-[1.1]"
+                        //className="absolute right-[0vw] top-[20vh] scale-[1.5] sm:scale-[1.1] w-[60vw] sm:w-[55%] aspect-square flex flex-col items-center justify-center"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <Image src="/image/appleright.png" alt="right apple" fill style={{ objectFit: "contain" }} />
