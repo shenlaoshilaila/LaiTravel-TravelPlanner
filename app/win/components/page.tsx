@@ -169,10 +169,11 @@ export default function ComponentsGamePage() {
             {gameStarted && (
                 <div
                     className={`relative mx-auto transition-all duration-300 ${
-                        showKeypad ? "mt-[10vh]" : "mt-[25vh]"
-                    } w-[60vw] max-w-[1000px] aspect-[3/2] sm:max-w-[1300px]`}
+                        showKeypad ? "mt-[4vh]" : "mt-[10vh]"
+                    } w-[95vw] sm:w-[80vw] max-w-[800px] aspect-[3/2]`}
                 >
-                    {/* Root Apple */}
+
+                {/* Root Apple */}
                     <div className="absolute left-1/2 top-[0%] -translate-x-1/2 scale-[1.5] sm:scale-[1.3] w-[55%] aspect-square flex items-center justify-center">
                         <Image src="/image/appleroot.png" alt="root apple" fill style={{ objectFit: "contain" }} />
                         <span className="absolute text-white font-bold text-[8vw] sm:text-7xl -translate-y-[30%]">
