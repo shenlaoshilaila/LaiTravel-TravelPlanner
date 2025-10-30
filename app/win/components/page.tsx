@@ -215,7 +215,7 @@ export default function ComponentsGamePage() {
                                 {/* ✅ Center keypad between apples */}
                                 {showKeypad && (
                                     <div
-                                        className="absolute left-[-150%] top-[80%] -translate-x-1/2 -translate-y-1/2
+                                        className="absolute left-[-120%] top-[80%] -translate-x-1/2 -translate-y-1/2
                z-50 w-[80vw] max-w-[320px] animate-slideUp"
                                         onClick={(e) => e.stopPropagation()}
                                     >
