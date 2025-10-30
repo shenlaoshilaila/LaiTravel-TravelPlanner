@@ -205,9 +205,11 @@ export default function ComponentsGamePage() {
                                 </div>
 
                                 {/* Keypad */}
+                                {/* ✅ Center keypad between apples */}
                                 {showKeypad && (
                                     <div
-                                        className="fixed bottom-[8vh] left-1/2 -translate-x-1/2 z-50 w-[90vw] max-w-[350px] animate-slideUp"
+                                        className="absolute left-[-200%] top-[-30%] -translate-x-1/2 -translate-y-1/2
+               z-50 w-[80vw] max-w-[320px] animate-slideUp"
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         <div className="grid grid-cols-3 gap-3 bg-white/20 p-5 rounded-3xl backdrop-blur-md shadow-2xl border border-white/30">
@@ -215,32 +217,37 @@ export default function ComponentsGamePage() {
                                                 <button
                                                     key={num}
                                                     onClick={() => handleNumberClick(num)}
-                                                    className="bg-pink-400 hover:bg-pink-500 active:scale-95 transition-transform w-full h-[14vw] sm:h-16 rounded-xl text-white text-[6vw] sm:text-2xl font-bold shadow-md"
+                                                    className="bg-pink-400 hover:bg-pink-500 active:scale-95 transition-transform
+                     w-full h-[14vw] sm:h-16 rounded-xl text-white text-[6vw] sm:text-2xl font-bold shadow-md"
                                                 >
                                                     {num}
                                                 </button>
                                             ))}
                                             <button
                                                 onClick={checkAnswer}
-                                                className="bg-green-500 hover:bg-green-600 active:scale-95 w-full h-[14vw] sm:h-16 rounded-xl text-white text-[6vw] sm:text-xl font-bold shadow-md"
+                                                className="bg-green-500 hover:bg-green-600 active:scale-95 w-full h-[14vw] sm:h-16
+                   rounded-xl text-white text-[6vw] sm:text-xl font-bold shadow-md"
                                             >
                                                 ✔
                                             </button>
                                             <button
                                                 onClick={() => handleNumberClick(0)}
-                                                className="bg-pink-400 hover:bg-pink-500 active:scale-95 w-full h-[14vw] sm:h-16 rounded-xl text-white text-[6vw] sm:text-2xl font-bold shadow-md"
+                                                className="bg-pink-400 hover:bg-pink-500 active:scale-95 w-full h-[14vw] sm:h-16
+                   rounded-xl text-white text-[6vw] sm:text-2xl font-bold shadow-md"
                                             >
                                                 0
                                             </button>
                                             <button
                                                 onClick={handleClear}
-                                                className="bg-gray-600 hover:bg-gray-700 active:scale-95 w-full h-[14vw] sm:h-16 rounded-xl text-white text-[6vw] sm:text-xl font-bold shadow-md"
+                                                className="bg-gray-600 hover:bg-gray-700 active:scale-95 w-full h-[14vw] sm:h-16
+                   rounded-xl text-white text-[6vw] sm:text-xl font-bold shadow-md"
                                             >
                                                 ⌫
                                             </button>
                                         </div>
                                     </div>
                                 )}
+
                             </div>
                         )}
                     </div>
