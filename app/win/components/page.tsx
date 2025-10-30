@@ -133,11 +133,17 @@ export default function ComponentsGamePage() {
 
             {/* 🧮 Score */}
             {gameStarted && (
-                <div className="absolute top-[4vw] left-[5vw] bg-white/20 border border-white/30 rounded-2xl p-3 w-[22vw] max-w-[120px] text-center shadow-lg backdrop-blur-sm">
-                    <p className="text-[4vw] sm:text-xl font-semibold text-yellow-300">Score</p>
-                    <p className="text-[6vw] sm:text-3xl font-bold text-white mt-1">{score}</p>
+                <div className="absolute top-[3vh] left-[4vw] bg-white/25 border border-white/40 rounded-3xl p-4
+                  w-[28vw] max-w-[160px] text-center shadow-xl backdrop-blur-md">
+                    <p className="text-[4vw] sm:text-2xl font-bold text-yellow-300 drop-shadow-md">
+                        Score
+                    </p>
+                    <p className="text-[7vw] sm:text-4xl font-extrabold text-white mt-2 tracking-wide drop-shadow-lg">
+                        {score}
+                    </p>
                 </div>
             )}
+
 
             {/* Step 1: Input */}
             {!gameStarted && (
@@ -208,7 +214,7 @@ export default function ComponentsGamePage() {
                                 {/* ✅ Center keypad between apples */}
                                 {showKeypad && (
                                     <div
-                                        className="absolute left-[-200%] top-[-30%] -translate-x-1/2 -translate-y-1/2
+                                        className="absolute left-[-180%] top-[-30%] -translate-x-1/2 -translate-y-1/2
                z-50 w-[80vw] max-w-[320px] animate-slideUp"
                                         onClick={(e) => e.stopPropagation()}
                                     >
