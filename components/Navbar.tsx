@@ -112,7 +112,7 @@ export default function Navbar({
                                    onRegister,
                                    onLogout,
                                    isLoggedIn = false,
-                                   username = ""
+                                   username = "",
                                }: NavbarProps) {
     const [showLogin, setShowLogin] = useState(false);
     const [showRegister, setShowRegister] = useState(false);

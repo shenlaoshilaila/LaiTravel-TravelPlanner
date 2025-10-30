@@ -169,7 +169,7 @@ export default function ComponentsGamePage() {
             {gameStarted && (
                 <div
                     className={`relative mx-auto transition-all duration-300 ${
-                        showKeypad ? "mt-[4vh]" : "mt-[10vh]"
+                        showKeypad ? "mt-[10vh]" : "mt-[10vh]"
                     } w-[95vw] sm:w-[80vw] max-w-[800px] aspect-[3/2]`}
                 >
 
@@ -215,7 +215,7 @@ export default function ComponentsGamePage() {
                                 {/* ✅ Center keypad between apples */}
                                 {showKeypad && (
                                     <div
-                                        className="absolute left-[-180%] top-[80%] -translate-x-1/2 -translate-y-1/2
+                                        className="absolute left-[-150%] top-[80%] -translate-x-1/2 -translate-y-1/2
                z-50 w-[80vw] max-w-[320px] animate-slideUp"
                                         onClick={(e) => e.stopPropagation()}
                                     >
