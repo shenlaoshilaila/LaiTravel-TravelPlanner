@@ -206,7 +206,7 @@ export default function ComponentsGamePage() {
                             <div className="absolute flex flex-col items-center -translate-y-[35%]">
                                 <div
                                     onClick={() => setShowKeypad((prev) => !prev)}
-                                    className="w-[18vw] max-w-[40px] h-[19vw] max-h-[120px] flex items-center justify-center text-black rounded-md bg-white/90 border border-gray-300 text-[5vw] sm:text-3xl cursor-pointer select-none"
+                                    className="w-[18vw] max-w-[40px] h-[9vw] max-h-[60px] flex items-center justify-center text-black rounded-md bg-white/90 border border-gray-300 text-[5vw] sm:text-3xl cursor-pointer select-none"
                                 >
                                     {userAnswer || "?"}
                                 </div>
@@ -215,7 +215,7 @@ export default function ComponentsGamePage() {
                                 {/* ✅ Center keypad between apples */}
                                 {showKeypad && (
                                     <div
-                                        className="absolute left-[-180%] top-[-30%] -translate-x-1/2 -translate-y-1/2
+                                        className="absolute left-[-180%] top-[80%] -translate-x-1/2 -translate-y-1/2
                z-50 w-[80vw] max-w-[320px] animate-slideUp"
                                         onClick={(e) => e.stopPropagation()}
                                     >
