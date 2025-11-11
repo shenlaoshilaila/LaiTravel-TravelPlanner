@@ -47,6 +47,19 @@ export default function GameMenuPage() {
                         🧩 Components Game
                     </button>
                 </Link>
+
+                {/* Game 3 - Crocodile Dentist */}
+                <Link href="/crocodile-dentist">
+                    <button
+                        className="
+                            w-64 py-4 bg-yellow-200 hover:bg-yellow-500
+                            text-white font-bold text-xl rounded-xl
+                            transition-all duration-300 transform hover:scale-105 shadow-lg
+                        "
+                    >
+                        🐊 Crocodile Dentist
+                    </button>
+                </Link>
             </div>
 
             {/* Footer */}
