@@ -1,5 +1,5 @@
 "use client";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 
 export default function CrocodileDentistPage() {
@@ -26,7 +26,6 @@ export default function CrocodileDentistPage() {
     };
 
     const handleToothClick = (id: number) => {
-        // ensure only one disappear per click
         setClickedTeeth((prev) => {
             if (prev.includes(id)) return prev;
             return [...prev, id];
@@ -34,6 +33,11 @@ export default function CrocodileDentistPage() {
     };
 
     const isVisible = (id: number) => !clickedTeeth.includes(id);
+
+    // ✅ Always reset state when switching to image phase
+    useEffect(() => {
+        if (phase === "image") setClickedTeeth([]);
+    }, [phase]);
 
     return (
         <div className="relative flex flex-col items-center justify-center w-screen h-screen overflow-hidden bg-black text-center">
@@ -46,6 +50,7 @@ export default function CrocodileDentistPage() {
                     preload="auto"
                     controls={false}
                     onEnded={() => {
+                        setClickedTeeth([]); // reset teeth when video ends
                         setPhase("image");
                         setIsPlaying(false);
                     }}
@@ -55,159 +60,248 @@ export default function CrocodileDentistPage() {
             {/* 🐊 Alligator Image + Teeth */}
             {phase === "image" && (
                 <div className="relative w-full h-full">
-                    {/* 🦷 Tooth 1 */}
+
+                    {/* 🦷 Tooth 1 stays fixed */}
                     {isVisible(1) && (
-                        <button
-                            key={`tooth-1`}
-                            onClick={() => handleToothClick(1)}
-                            className="absolute inset-0 z-20 w-full h-full"
-                        >
-                            <Image
-                                src="/image/tooth1.png"
-                                alt="Tooth 1"
-                                fill
-                                className="object-contain hover:scale-105 transition-transform duration-300"
+                        <>
+                            {/* 🦷 Tooth Image (does NOT move) */}
+                            <div
+                                className="absolute z-20"
+                                style={{
+                                    top: "43vh",
+                                    left: "26vw", // keep tooth in correct position
+                                    width: "14vw",
+                                    height: "14vw",
+                                    transform: "translate(-50%, -50%)",
+                                }}
+                            >
+                                <Image
+                                    src="/image/tooth1.png"
+                                    alt="Tooth 1"
+                                    fill
+                                    className="object-cover scale-125 pointer-events-none"
+                                />
+                            </div>
+
+                            {/* 🟥 Clickable red box (moves separately) */}
+                            <button
+                                onClick={() => handleToothClick(1)}
+                                className="absolute z-30 cursor-pointer"
+                                style={{
+                                    top: "43vh",
+                                    left: "22vw", // 👈 move red box to left relative to tooth
+                                    width: "10vw",
+                                    height: "10vw",
+                                    transform: "translate(-50%, -50%)",
+                                    backgroundColor: "rgba(255, 0, 0, 0.15)", // red transparent overlay
+                                    border: "2px solid red",
+                                }}
                             />
-                        </button>
+                        </>
                     )}
 
-                    {/* 🦷 Tooth 2 */}
+
+
+                    {/* 🦷 Tooth 2 (clip-path click area, visible image always shown) */}
                     {isVisible(2) && (
-                        <button
-                            key={`tooth-2`}
-                            onClick={() => handleToothClick(2)}
-                            className="absolute z-20"
-                            style={{
-                                top: "43vh",
-                                left: "63vw",
-                                width: "180vw",
-                                height: "180vw",
-                                transform: "translate(-50%, -50%)",
-                            }}
-                        >
-                            <Image
-                                src="/image/tooth2.png"
-                                alt="Tooth 2"
-                                fill
-                                className="object-contain"
+                        <>
+                            {/* 🦷 Tooth Image (does NOT move) */}
+                            <div
+                                className="absolute z-20"
+                                style={{
+                                    top: "46vh",
+                                    left: "30vw", // keep tooth in correct position
+                                    width: "8vw",
+                                    height: "8vw",
+                                    transform: "translate(-50%, -50%)",
+                                }}
+                            >
+                                <Image
+                                    src="/image/tooth2.png"
+                                    alt="Tooth 2"
+                                    fill
+                                    className="object-cover scale-125 pointer-events-none"
+                                />
+                            </div>
+
+                            {/* 🟥 Clickable red box (moves separately) */}
+                            <button
+                                onClick={() => handleToothClick(2)}
+                                className="absolute z-30 cursor-pointer"
+                                style={{
+                                    top: "48vh",
+                                    left: "30vw", // 👈 move red box to left relative to tooth
+                                    width: "5vw",
+                                    height: "5vw",
+                                    transform: "translate(-50%, -50%)",
+                                    backgroundColor: "rgba(255, 0, 0, 0.15)", // red transparent overlay
+                                    border: "2px solid red",
+                                }}
                             />
-                        </button>
+                        </>
                     )}
+
+
+
 
                     {/* 🦷 Tooth 3 */}
                     {isVisible(3) && (
-                        <button
-                            key={`tooth-3`}
-                            onClick={() => handleToothClick(3)}
-                            className="absolute z-20"
-                            style={{
-                                top: "43vh",
-                                left: "69vw",
-                                width: "180vw",
-                                height: "180vw",
-                                transform: "translate(-50%, -50%)",
-                            }}
-                        >
-                            <Image
-                                src="/image/tooth3.png"
-                                alt="Tooth 3"
-                                fill
-                                className="object-contain"
+                        <>
+                            {/* 🦷 Tooth Image (does NOT move) */}
+                            <div
+                                className="absolute z-20"
+                                style={{
+                                    top: "44vh",
+                                    left: "36vw", // keep tooth in correct position
+                                    width: "10vw",
+                                    height: "10vw",
+                                    transform: "translate(-50%, -50%)",
+                                }}
+                            >
+                                <Image
+                                    src="/image/tooth3.png"
+                                    alt="Tooth 3"
+                                    fill
+                                    className="object-cover scale-125 pointer-events-none"
+                                />
+                            </div>
+
+                            {/* 🟥 Clickable red box (moves separately) */}
+                            <button
+                                onClick={() => handleToothClick(3)}
+                                className="absolute z-30 cursor-pointer"
+                                style={{
+                                    top: "48vh",
+                                    left: "35vw", // 👈 move red box to left relative to tooth
+                                    width: "5vw",
+                                    height: "5vw",
+                                    transform: "translate(-50%, -50%)",
+                                    backgroundColor: "rgba(255, 0, 0, 0.15)", // red transparent overlay
+                                    border: "2px solid red",
+                                }}
                             />
-                        </button>
+                        </>
                     )}
 
                     {/* 🦷 Tooth 4 */}
                     {isVisible(4) && (
-                        <button
-                            key={`tooth-4`}
-                            onClick={() => handleToothClick(4)}
-                            className="absolute z-20"
-                            style={{
-                                top: "46vh",
-                                left: "67vw",
-                                width: "180vw",
-                                height: "180vw",
-                                transform: "translate(-50%, -50%)",
-                            }}
-                        >
-                            <Image
-                                src="/image/tooth4.png"
-                                alt="Tooth 4"
-                                fill
-                                className="object-contain"
+                        <>
+                            {/* 🦷 Tooth Image (does NOT move) */}
+                            <div
+                                className="absolute z-20"
+                                style={{
+                                    top: "46vh",
+                                    left: "48vw", // keep tooth in correct position
+                                    width: "15vw",
+                                    height: "15vw",
+                                    transform: "translate(-50%, -50%)",
+                                }}
+                            >
+                                <Image
+                                    src="/image/tooth4.png"
+                                    alt="Tooth 4"
+                                    fill
+                                    className="object-cover scale-125 pointer-events-none"
+                                />
+                            </div>
+
+                            {/* 🟥 Clickable red box (moves separately) */}
+                            <button
+                                onClick={() => handleToothClick(4)}
+                                className="absolute z-30 cursor-pointer"
+                                style={{
+                                    top: "47vh",
+                                    left: "40vw", // 👈 move red box to left relative to tooth
+                                    width: "5vw",
+                                    height: "5vw",
+                                    transform: "translate(-50%, -50%)",
+                                    backgroundColor: "rgba(255, 0, 0, 0.15)", // red transparent overlay
+                                    border: "2px solid red",
+                                }}
                             />
-                        </button>
+                        </>
                     )}
 
                     {/* 🦷 Tooth 5 */}
                     {isVisible(5) && (
-                        <button
-                            key={`tooth-5`}
-                            onClick={() => handleToothClick(5)}
-                            className="absolute z-20"
-                            style={{
-                                top: "47vh",
-                                left: "64vw",
-                                width: "180vw",
-                                height: "180vw",
-                                transform: "translate(-50%, -50%)",
-                            }}
-                        >
-                            <Image
-                                src="/image/tooth5.png"
-                                alt="Tooth 5"
-                                fill
-                                className="object-contain"
+                        <>
+                            {/* 🦷 Tooth Image (does NOT move) */}
+                            <div
+                                className="absolute z-20"
+                                style={{
+                                    top: "46vh",
+                                    left: "60vw", // keep tooth in correct position
+                                    width: "15vw",
+                                    height: "15vw",
+                                    transform: "translate(-50%, -50%)",
+                                }}
+                            >
+                                <Image
+                                    src="/image/tooth5.png"
+                                    alt="Tooth 5"
+                                    fill
+                                    className="object-cover scale-125 pointer-events-none"
+                                />
+                            </div>
+
+                            {/* 🟥 Clickable red box (moves separately) */}
+                            <button
+                                onClick={() => handleToothClick(5)}
+                                className="absolute z-30 cursor-pointer"
+                                style={{
+                                    top: "47vh",
+                                    left: "40vw", // 👈 move red box to left relative to tooth
+                                    width: "5vw",
+                                    height: "5vw",
+                                    transform: "translate(-50%, -50%)",
+                                    backgroundColor: "rgba(255, 0, 0, 0.15)", // red transparent overlay
+                                    border: "2px solid red",
+                                }}
                             />
-                        </button>
+                        </>
                     )}
 
                     {/* 🦷 Tooth 6 */}
                     {isVisible(6) && (
-                        <button
-                            key={`tooth-6`}
-                            onClick={() => handleToothClick(6)}
-                            className="absolute z-20"
-                            style={{
-                                top: "50vh",
-                                left: "63vw",
-                                width: "180vw",
-                                height: "180vw",
-                                transform: "translate(-50%, -50%)",
-                            }}
-                        >
-                            <Image
-                                src="/image/tooth6.png"
-                                alt="Tooth 6"
-                                fill
-                                className="object-contain"
+                        <>
+                            {/* 🦷 Tooth Image (does NOT move) */}
+                            <div
+                                className="absolute z-20"
+                                style={{
+                                    top: "46vh",
+                                    left: "60vw", // keep tooth in correct position
+                                    width: "55vw",
+                                    height: "55vw",
+                                    transform: "translate(-50%, -50%)",
+                                }}
+                            >
+                                <Image
+                                    src="/image/tooth6.png"
+                                    alt="Tooth 6"
+                                    fill
+                                    className="object-cover scale-125 pointer-events-none"
+                                />
+                            </div>
+
+                            {/* 🟥 Clickable red box (moves separately) */}
+                            <button
+                                onClick={() => handleToothClick(6)}
+                                className="absolute z-30 cursor-pointer"
+                                style={{
+                                    top: "45vh",
+                                    left: "52vw", // 👈 move red box to left relative to tooth
+                                    width: "5vw",
+                                    height: "5vw",
+                                    transform: "translate(-50%, -50%)",
+                                    backgroundColor: "rgba(255, 0, 0, 0.15)", // red transparent overlay
+                                    border: "2px solid red",
+                                }}
                             />
-                        </button>
+                        </>
                     )}
 
                     {/* 🦷 Tooth 7 */}
-                    {isVisible(7) && (
-                        <button
-                            key={`tooth-7`}
-                            onClick={() => handleToothClick(7)}
-                            className="absolute z-20"
-                            style={{
-                                top: "75vh",
-                                left: "53vw",
-                                width: "180vw",
-                                height: "180vw",
-                                transform: "translate(-50%, -50%)",
-                            }}
-                        >
-                            <Image
-                                src="/image/tooth7.png"
-                                alt="Tooth 7"
-                                fill
-                                className="object-contain"
-                            />
-                        </button>
-                    )}
+
 
                     {/* 🐊 Alligator Image (on top) */}
                     <Image
@@ -217,12 +311,15 @@ export default function CrocodileDentistPage() {
                         className="object-contain z-50 pointer-events-none"
                     />
 
+
+
+
                     {/* 🔁 Restart Button */}
                     <button
                         onClick={handleRestart}
                         className="absolute bottom-10 left-1/2 -translate-x-1/2 px-6 py-3
-            bg-yellow-400 text-black font-semibold rounded-lg
-            hover:bg-yellow-500 transition shadow-lg z-30"
+                        bg-yellow-400 text-black font-semibold rounded-lg
+                        hover:bg-yellow-500 transition shadow-lg z-30"
                     >
                         🔁 Restart
                     </button>
@@ -234,8 +331,8 @@ export default function CrocodileDentistPage() {
                 <button
                     onClick={handleStart}
                     className="absolute inset-0 flex items-center justify-center
-                     bg-black/50 text-white text-5xl font-extrabold
-                     transition-all duration-300 hover:bg-black/70"
+                    bg-black/50 text-white text-5xl font-extrabold
+                    transition-all duration-300 hover:bg-black/70"
                 >
                     ▶️ Start Game
                 </button>

@@ -60,6 +60,19 @@ export default function GameMenuPage() {
                         🐊 Crocodile Dentist
                     </button>
                 </Link>
+
+                {/* ⭐ New Game 4 - Multiplication Game */}
+                <Link href="/multiplication">
+                    <button
+                        className="
+                            w-64 py-4 bg-green-500 hover:bg-green-600
+                            text-white font-bold text-xl rounded-xl
+                            transition-all duration-300 transform hover:scale-105 shadow-lg
+                        "
+                    >
+                        ✖️ Multiplication Game
+                    </button>
+                </Link>
             </div>
 
             {/* Footer */}
