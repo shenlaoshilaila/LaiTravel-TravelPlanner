@@ -61,7 +61,7 @@ export default function GameMenuPage() {
                     </button>
                 </Link>
 
-                {/* ⭐ New Game 4 - Multiplication Game */}
+                {/* Game 4 - Multiplication Game */}
                 <Link href="/multiplication">
                     <button
                         className="
@@ -71,6 +71,19 @@ export default function GameMenuPage() {
                         "
                     >
                         ✖️ Multiplication Game
+                    </button>
+                </Link>
+
+                {/* ⭐ New Game 5 - Place Value Game */}
+                <Link href="/place-value">
+                    <button
+                        className="
+                            w-64 py-4 bg-orange-500 hover:bg-orange-600
+                            text-white font-bold text-xl rounded-xl
+                            transition-all duration-300 transform hover:scale-105 shadow-lg
+                        "
+                    >
+                        🔢 How Many Ones, Tens, Hundreds or Thousands?
                     </button>
                 </Link>
             </div>
