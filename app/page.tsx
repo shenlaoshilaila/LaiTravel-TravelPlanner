@@ -5,7 +5,7 @@ import Image from "next/image";
 
 export default function GameMenuPage() {
     return (
-        <main className="relative h-screen flex flex-col items-center justify-center text-center text-white font-sans overflow-hidden">
+        <main className="relative min-h-screen flex flex-col items-center text-center text-white font-sans overflow-y-auto py-20">
             {/* 🌆 Animated Background */}
             <Image
                 src="/image/gamebackground.gif"
@@ -53,10 +53,16 @@ export default function GameMenuPage() {
                     </button>
                 </Link>
 
-                {/* 🆕 Mix Calculation Game */}
                 <Link href="/mix-calculation">
                     <button className="w-64 py-4 bg-pink-500 hover:bg-pink-600 text-white font-bold text-xl rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg">
                         🔀 Mix Calculation Game
+                    </button>
+                </Link>
+
+                {/* 🆕 Math Under 10 */}
+                <Link href="/math-under-10">
+                    <button className="w-64 py-4 bg-red-500 hover:bg-red-600 text-white font-bold text-xl rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg">
+                        🧮 Math Under 10
                     </button>
                 </Link>
 
@@ -65,9 +71,10 @@ export default function GameMenuPage() {
                         🔢 How Many Ones, Tens, Hundreds or Thousands?
                     </button>
                 </Link>
+
             </div>
 
-            <footer className="absolute bottom-8 text-gray-300 text-sm">
+            <footer className="mt-16 text-gray-300 text-sm">
                 © 2025 Liya’s Game Room
             </footer>
         </main>
