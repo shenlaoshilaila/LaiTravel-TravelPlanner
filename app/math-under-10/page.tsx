@@ -8,6 +8,8 @@ type Question = {
     op: "+" | "-";
 };
 
+type Mode = "add" | "sub" | "mix";
+
 export default function MathUnder10Page() {
     const [baseNumber, setBaseNumber] = useState<number | null>(null);
     const [startInput, setStartInput] = useState("");
@@ -16,6 +18,7 @@ export default function MathUnder10Page() {
     const [message, setMessage] = useState("");
     const [score, setScore] = useState(0);
     const [gif, setGif] = useState<string | null>(null);
+    const [mode, setMode] = useState<Mode>("mix");
 
     const successGifs = ["/image/mathy1.gif", "/image/mathy2.gif"];
     const wrongGifs = ["/image/mathw1.gif", "/image/mathw2.gif"];
@@ -26,19 +29,41 @@ export default function MathUnder10Page() {
         setTimeout(() => setGif(null), duration);
     };
 
-    // 🔑 UPDATED LOGIC HERE
-    const generateQuestion = (num: number) => {
-        const isAdd = Math.random() > 0.5;
+    // 🔥 Updated Question Generator
+    const generateQuestion = () => {
+        let operation: "+" | "-";
 
-        if (isAdd) {
-            // Addition: a + b = num
-            const a = Math.floor(Math.random() * (num + 1));
-            const b = num - a;
-            setQuestion({ a, b, op: "+" });
+        if (mode === "mix") {
+            operation = Math.random() > 0.5 ? "+" : "-";
+        } else if (mode === "add") {
+            operation = "+";
         } else {
-            // Subtraction: num - b = answer
-            const b = Math.floor(Math.random() * (num + 1));
-            setQuestion({ a: num, b, op: "-" });
+            operation = "-";
+        }
+
+        // MIX MODE (true random 0–10)
+        if (mode === "mix") {
+            if (operation === "+") {
+                const a = Math.floor(Math.random() * 11);
+                const b = Math.floor(Math.random() * (11 - a)); // ensure sum <= 10
+                setQuestion({ a, b, op: "+" });
+            } else {
+                const a = Math.floor(Math.random() * 11);
+                const b = Math.floor(Math.random() * (a + 1)); // ensure result >= 0
+                setQuestion({ a, b, op: "-" });
+            }
+        } else {
+            // ORIGINAL BASE NUMBER MODE
+            const num = baseNumber!;
+
+            if (operation === "+") {
+                const a = Math.floor(Math.random() * (num + 1));
+                const b = num - a;
+                setQuestion({ a, b, op: "+" });
+            } else {
+                const b = Math.floor(Math.random() * (num + 1));
+                setQuestion({ a: num, b, op: "-" });
+            }
         }
 
         setAnswer("");
@@ -47,14 +72,22 @@ export default function MathUnder10Page() {
 
     const startGame = () => {
         const num = Number(startInput);
-        if (num < 1 || num > 10) {
+
+        if (mode !== "mix" && (num < 1 || num > 10)) {
             setMessage("❌ Please enter a number between 1 and 10");
             return;
         }
-        setBaseNumber(num);
+
+        if (mode !== "mix") {
+            setBaseNumber(num);
+        } else {
+            setBaseNumber(10); // dummy value for score display
+        }
+
         setScore(0);
         setGif(null);
-        generateQuestion(num);
+        setMessage("");
+        generateQuestion();
     };
 
     const checkAnswer = () => {
@@ -74,7 +107,7 @@ export default function MathUnder10Page() {
                 playRandomGif(successGifs, 3000);
             }
 
-            setTimeout(() => generateQuestion(baseNumber!), 800);
+            setTimeout(() => generateQuestion(), 800);
         } else {
             setMessage("❌ Try again");
             playRandomGif(wrongGifs, 2000);
@@ -104,29 +137,65 @@ export default function MathUnder10Page() {
                 </div>
             )}
 
-            {/* Start Screen */}
-            {!baseNumber && (
+            {/* START SCREEN */}
+            {!question && (
                 <div className="flex flex-col gap-4">
-                    <input
-                        type="number"
-                        placeholder="Enter a number (1–10)"
-                        value={startInput}
-                        onChange={(e) => setStartInput(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && startGame()}
-                        className="border rounded px-4 py-2 text-lg text-center"
-                    />
+
+                    {/* MODE SELECTOR */}
+                    <div className="flex gap-2 justify-center">
+                        <button
+                            onClick={() => setMode("add")}
+                            className={`px-4 py-2 rounded ${
+                                mode === "add" ? "bg-blue-600 text-white" : "bg-gray-200"
+                            }`}
+                        >
+                            Addition
+                        </button>
+
+                        <button
+                            onClick={() => setMode("sub")}
+                            className={`px-4 py-2 rounded ${
+                                mode === "sub" ? "bg-blue-600 text-white" : "bg-gray-200"
+                            }`}
+                        >
+                            Subtraction
+                        </button>
+
+                        <button
+                            onClick={() => setMode("mix")}
+                            className={`px-4 py-2 rounded ${
+                                mode === "mix" ? "bg-blue-600 text-white" : "bg-gray-200"
+                            }`}
+                        >
+                            Mix (0–10)
+                        </button>
+                    </div>
+
+                    {/* Only show input if NOT mix mode */}
+                    {mode !== "mix" && (
+                        <input
+                            type="number"
+                            placeholder="Enter a number (1–10)"
+                            value={startInput}
+                            onChange={(e) => setStartInput(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && startGame()}
+                            className="border rounded px-4 py-2 text-lg text-center"
+                        />
+                    )}
+
                     <button
                         onClick={startGame}
                         className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg text-lg"
                     >
                         Start
                     </button>
+
                     <p className="text-red-500">{message}</p>
                 </div>
             )}
 
-            {/* Game Screen */}
-            {baseNumber && question && (
+            {/* GAME SCREEN */}
+            {question && (
                 <div className="flex flex-col gap-4 mt-6">
                     <div className="text-3xl font-bold">
                         {question.a} {question.op} {question.b} = ?
