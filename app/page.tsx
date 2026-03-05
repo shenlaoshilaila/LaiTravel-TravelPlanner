@@ -53,13 +53,19 @@ export default function GameMenuPage() {
                     </button>
                 </Link>
 
+                {/* 🆕 Two Divide One */}
+                <Link href="/two-divide-one">
+                    <button className="w-64 py-4 bg-teal-500 hover:bg-teal-600 text-white font-bold text-xl rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg">
+                        ➗ Two Divide One
+                    </button>
+                </Link>
+
                 <Link href="/mix-calculation">
                     <button className="w-64 py-4 bg-pink-500 hover:bg-pink-600 text-white font-bold text-xl rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg">
                         🔀 Mix Calculation Game
                     </button>
                 </Link>
 
-                {/* 🆕 Math Under 10 */}
                 <Link href="/math-under-10">
                     <button className="w-64 py-4 bg-red-500 hover:bg-red-600 text-white font-bold text-xl rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg">
                         🧮 Math Under 10
