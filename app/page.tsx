@@ -25,7 +25,7 @@ export default function GameMenuPage() {
 
                 <Link href="/win">
                     <button className="w-64 py-4 bg-blue-500 hover:bg-blue-600 text-white font-bold text-xl rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg">
-                        💰 Win Your Birthday Money
+                        ✖️ One Multiply Two
                     </button>
                 </Link>
 
