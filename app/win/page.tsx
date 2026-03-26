@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 
 export default function WinPage() {
     const [num1, setNum1] = useState(12);
@@ -10,12 +10,10 @@ export default function WinPage() {
     const [feedback, setFeedback] = useState("");
     const [finished, setFinished] = useState(false);
 
-    const audioRef = useRef<HTMLAudioElement | null>(null);
-
     // 🎯 generate problem
     const generateProblem = () => {
         const n1 = Math.floor(Math.random() * 90) + 10; // 10–99
-        const n2 = Math.floor(Math.random() * 9) + 1;   // 1–9
+        const n2 = Math.floor(Math.random() * 8) + 2;   // ✅ 2–9 (NO ×1)
 
         setNum1(n1);
         setNum2(n2);
@@ -28,18 +26,11 @@ export default function WinPage() {
         generateProblem();
     }, []);
 
-    // 🎵 play sound when correct
-    useEffect(() => {
-        if (finished && audioRef.current) {
-            audioRef.current.currentTime = 0;
-            audioRef.current.play().catch(() => {});
-        }
-    }, [finished]);
-
     const checkAnswer = () => {
         const correct = num1 * num2;
+        const userAnswer = parseInt(answer);
 
-        if (parseInt(answer) === correct) {
+        if (!isNaN(userAnswer) && userAnswer === correct) {
             setFeedback("correct");
             setScore((prev) => prev + 10);
             setFinished(true);
@@ -55,11 +46,8 @@ export default function WinPage() {
     return (
         <main className="h-screen flex flex-col items-center justify-center bg-gradient-to-b from-amber-200 to-yellow-400 text-center text-gray-900">
 
-            {/* 🔊 sound */}
-            <audio ref={audioRef} src="/music/win.mp3" />
-
             <h1 className="text-5xl font-extrabold mb-8 drop-shadow-lg">
-                ✖ One Multiply Two ✖
+                🧮 One Multiply Two
             </h1>
 
             {/* SCORE */}
