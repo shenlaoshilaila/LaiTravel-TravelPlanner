@@ -72,6 +72,12 @@ export default function GameMenuPage() {
                     </button>
                 </Link>
 
+                <Link href="/math-under-20">
+                    <button className="w-64 py-4 bg-cyan-500 hover:bg-cyan-600 text-white font-bold text-xl rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg">
+                        🧮 Math Under 20
+                    </button>
+                </Link>
+
                 <Link href="/place-value">
                     <button className="w-64 py-4 bg-orange-500 hover:bg-orange-600 text-white font-bold text-xl rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg">
                         🔢 How Many Ones, Tens, Hundreds or Thousands?
